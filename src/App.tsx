@@ -10,6 +10,7 @@ import Setup from "./pages/Setup.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
 import Profile from "./pages/Profile.tsx";
 import PostProject from "./pages/PostProject.tsx";
+import TradePhotoAnalyzer from "./pages/TradePhotoAnalyzer.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
