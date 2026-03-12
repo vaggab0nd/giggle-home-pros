@@ -14,6 +14,11 @@ import TradePhotoAnalyzer from "./pages/TradePhotoAnalyzer.tsx";
 import About from "./pages/About.tsx";
 import Contact from "./pages/Contact.tsx";
 import Privacy from "./pages/Privacy.tsx";
+import ContractorSignUp from "./pages/ContractorSignUp.tsx";
+import AIBiddingTools from "./pages/AIBiddingTools.tsx";
+import SameDayPayments from "./pages/SameDayPayments.tsx";
+import HowEscrowWorks from "./pages/HowEscrowWorks.tsx";
+import BrowseContractors from "./pages/BrowseContractors.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -36,6 +41,11 @@ const App = () => (
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/privacy" element={<Privacy />} />
+            <Route path="/contractor-signup" element={<ContractorSignUp />} />
+            <Route path="/ai-bidding-tools" element={<AIBiddingTools />} />
+            <Route path="/same-day-payments" element={<SameDayPayments />} />
+            <Route path="/how-escrow-works" element={<HowEscrowWorks />} />
+            <Route path="/browse-contractors" element={<BrowseContractors />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
