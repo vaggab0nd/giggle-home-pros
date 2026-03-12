@@ -22,9 +22,9 @@ const Footer = () => {
           <div>
             <h4 className="font-semibold text-primary-foreground mb-3 font-heading">For Contractors</h4>
             <ul className="space-y-2 text-sm">
-              <li><a href="#" className="hover:text-primary transition-colors">Sign Up</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">AI Bidding Tools</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Same-Day Payments</a></li>
+              <li><a href="/contractor-signup" className="hover:text-primary transition-colors">Sign Up</a></li>
+              <li><a href="/ai-bidding-tools" className="hover:text-primary transition-colors">AI Bidding Tools</a></li>
+              <li><a href="/same-day-payments" className="hover:text-primary transition-colors">Same-Day Payments</a></li>
             </ul>
           </div>
           <div>
