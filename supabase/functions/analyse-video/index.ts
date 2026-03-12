@@ -5,11 +5,18 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const ANALYSE_URL = "https://stable-gig-374485351183.europe-west1.run.app/analyse";
+const ANALYSE_URL = Deno.env.get("ANALYSE_URL") ?? "";
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
+  }
+
+  if (!ANALYSE_URL) {
+    return new Response(JSON.stringify({ error: 'Service not configured' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 
   try {
