@@ -12,11 +12,15 @@ import { TRADE_CATEGORIES } from "@/components/photo-analyzer/types";
 
 type VideoAnalysisResult = {
   summary?: string;
+  likely_issue?: string;
   urgency?: string;
+  urgency_score?: number;
   trade_category?: string;
   materials?: string[];
   estimated_cost_range?: string;
   recommendations?: string[];
+  required_tools?: string[];
+  estimated_parts?: string[];
   [key: string]: unknown;
 };
 
