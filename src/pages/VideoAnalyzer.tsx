@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Upload, Video, Loader2, AlertTriangle, CheckCircle, X } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { TRADE_CATEGORIES } from "@/components/photo-analyzer/types";
-import { supabase } from "@/integrations/supabase/client";
+
 
 type VideoAnalysisResult = {
   summary?: string;
