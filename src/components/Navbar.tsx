@@ -26,6 +26,7 @@ const Navbar = ({ variant = "transparent" }: NavbarProps) => {
           <a href="/#how" className="text-sm font-medium text-primary-foreground/80 hover:text-primary-foreground transition-colors">How It Works</a>
           <a href="/#features" className="text-sm font-medium text-primary-foreground/80 hover:text-primary-foreground transition-colors">Features</a>
           <Link to="/photo-analyzer" className="text-sm font-medium text-primary-foreground/80 hover:text-primary-foreground transition-colors">Photo Analyzer</Link>
+          <Link to="/video-analyzer" className="text-sm font-medium text-primary-foreground/80 hover:text-primary-foreground transition-colors">Video Analyzer</Link>
 
           {!loading && !user && (
             <>
@@ -60,6 +61,7 @@ const Navbar = ({ variant = "transparent" }: NavbarProps) => {
           <a href="/#how" className="block py-2 text-primary-foreground/90 font-medium">How It Works</a>
           <a href="/#features" className="block py-2 text-primary-foreground/90 font-medium">Features</a>
           <Link to="/photo-analyzer" className="block py-2 text-primary-foreground/90 font-medium">Photo Analyzer</Link>
+          <Link to="/video-analyzer" className="block py-2 text-primary-foreground/90 font-medium">Video Analyzer</Link>
 
           {!loading && !user && (
             <>
