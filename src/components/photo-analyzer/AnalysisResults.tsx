@@ -13,7 +13,7 @@ type Props = {
 
 const urgencyColor = (score: number) => {
   if (score >= 8) return "bg-destructive/10 text-destructive";
-  if (score >= 5) return "bg-accent/10 text-accent-foreground";
+  if (score >= 5) return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300";
   return "bg-primary/10 text-primary";
 };
 
