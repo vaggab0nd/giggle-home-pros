@@ -9,7 +9,7 @@ import Navbar from "@/components/Navbar";
 import PhotoGrid from "@/components/photo-analyzer/PhotoGrid";
 import AnalysisResults from "@/components/photo-analyzer/AnalysisResults";
 import { PhotoFile, AnalysisResult, TRADE_CATEGORIES, MAX_PHOTOS, MAX_FILE_SIZE, ACCEPTED_TYPES } from "@/components/photo-analyzer/types";
-import { supabase } from "@/integrations/supabase/client";
+
 
 const fileToBase64 = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
