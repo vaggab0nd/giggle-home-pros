@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -36,10 +36,17 @@ const EXPERTISE_OPTIONS = [
 ];
 
 const ContractorOnboarding = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [step, setStep] = useState(1);
+
+  // Redirect unauthenticated visitors to sign in, then return here
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/auth?next=/contractor/signup", { replace: true });
+    }
+  }, [user, authLoading, navigate]);
   const [saving, setSaving] = useState(false);
 
   const [businessName, setBusinessName] = useState("");
