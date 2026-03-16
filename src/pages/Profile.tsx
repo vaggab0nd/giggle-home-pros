@@ -94,8 +94,21 @@ const Profile = () => {
     );
   };
 
+  const validateProfile = (): string | null => {
+    if (fullName.trim().length > 0 && fullName.trim().length < 2) return "Full name must be at least 2 characters.";
+    if (fullName.trim().length > 100) return "Full name must be under 100 characters.";
+    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return "Please enter a valid email address.";
+    if (postcode && !/^\d{5}$/.test(postcode)) return "Please enter a valid 5-digit ZIP code.";
+    if (city.trim().length > 100) return "City name is too long.";
+    if (state.trim().length > 50) return "State is too long.";
+    if (roadAddress.trim().length > 200) return "Street address is too long.";
+    return null;
+  };
+
   const handleSave = async () => {
     if (!user) return;
+    const err = validateProfile();
+    if (err) { toast({ title: "Please check your details", description: err, variant: "destructive" }); return; }
     setSaving(true);
 
     const { error } = await supabase
@@ -116,6 +129,7 @@ const Profile = () => {
       toast({ title: "Error saving", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Profile saved", description: "Your changes have been saved." });
+      navigate("/dashboard");
     }
   };
 

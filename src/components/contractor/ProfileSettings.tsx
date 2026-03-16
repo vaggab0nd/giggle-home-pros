@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -34,6 +35,7 @@ interface ContractorData {
 export function ProfileSettings() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingVerification, setSavingVerification] = useState(false);
@@ -96,8 +98,26 @@ export function ProfileSettings() {
     })();
   }, [user, lookupZip]);
 
+  const validateProfile = (): string | null => {
+    const name = businessName.trim();
+    if (name.length < 2) return "Business name must be at least 2 characters.";
+    if (name.length > 100) return "Business name must be under 100 characters.";
+    if (postcode && !/^\d{5}$/.test(postcode)) return "Please enter a valid 5-digit ZIP code.";
+    const ph = phone.trim().replace(/[\s\-().+]/g, "");
+    if (phone.trim() && !/^\d{7,15}$/.test(ph)) return "Please enter a valid phone number.";
+    return null;
+  };
+
+  const validateVerification = (): string | null => {
+    if (licenseNumber.trim().length > 50) return "License number must be under 50 characters.";
+    if (insuranceDetails.trim().length > 200) return "Insurance details must be under 200 characters.";
+    return null;
+  };
+
   const handleSaveProfile = async () => {
     if (!data) return;
+    const err = validateProfile();
+    if (err) { toast({ title: "Please check your details", description: err, variant: "destructive" }); return; }
     setSavingProfile(true);
     const { error } = await supabase
       .from("contractors" as any)
@@ -108,11 +128,14 @@ export function ProfileSettings() {
       toast({ title: "Error saving", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Profile saved", description: "Your business details have been updated." });
+      navigate("/contractor/profile");
     }
   };
 
   const handleSaveVerification = async () => {
     if (!data) return;
+    const err = validateVerification();
+    if (err) { toast({ title: "Please check your details", description: err, variant: "destructive" }); return; }
     setSavingVerification(true);
     const { error } = await supabase
       .from("contractors" as any)
@@ -123,6 +146,7 @@ export function ProfileSettings() {
       toast({ title: "Error saving", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Verification saved", description: "Your credentials have been updated." });
+      navigate("/contractor/profile");
     }
   };
 
