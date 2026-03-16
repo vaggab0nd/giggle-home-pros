@@ -45,6 +45,7 @@ const App = () => (
             <Route path="/contact" element={<Contact />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/contractor-signup" element={<ContractorSignUp />} />
+            <Route path="/contractor/signup" element={<ContractorOnboarding />} />
             <Route path="/ai-bidding-tools" element={<AIBiddingTools />} />
             <Route path="/same-day-payments" element={<SameDayPayments />} />
             <Route path="/how-escrow-works" element={<HowEscrowWorks />} />
