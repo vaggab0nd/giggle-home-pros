@@ -17,6 +17,7 @@ import Contact from "./pages/Contact.tsx";
 import Privacy from "./pages/Privacy.tsx";
 import ContractorSignUp from "./pages/ContractorSignUp.tsx";
 import ContractorOnboarding from "./pages/ContractorOnboarding.tsx";
+import ContractorProfile from "./pages/ContractorProfile.tsx";
 import AIBiddingTools from "./pages/AIBiddingTools.tsx";
 import SameDayPayments from "./pages/SameDayPayments.tsx";
 import HowEscrowWorks from "./pages/HowEscrowWorks.tsx";
@@ -46,6 +47,7 @@ const App = () => (
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/contractor-signup" element={<ContractorSignUp />} />
             <Route path="/contractor/signup" element={<ContractorOnboarding />} />
+            <Route path="/contractor/profile/*" element={<ContractorProfile />} />
             <Route path="/ai-bidding-tools" element={<AIBiddingTools />} />
             <Route path="/same-day-payments" element={<SameDayPayments />} />
             <Route path="/how-escrow-works" element={<HowEscrowWorks />} />
