@@ -1,11 +1,10 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { useEffect } from "react";
 import { Mail, Lock, ArrowLeft } from "lucide-react";
 
 type View = "sign-in" | "sign-up";
@@ -18,10 +17,19 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
 
   useEffect(() => {
     if (!user) return;
+
+    // If a ?next= param is present, go there directly (e.g. returning from contractor signup)
+    const next = searchParams.get("next");
+    if (next?.startsWith("/")) {
+      navigate(next, { replace: true });
+      return;
+    }
+
     // Check if user is a contractor first
     supabase
       .from("contractors")
