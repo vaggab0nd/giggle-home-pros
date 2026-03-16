@@ -22,20 +22,32 @@ const Auth = () => {
 
   useEffect(() => {
     if (!user) return;
-    // Check if profile is complete — redirect to /profile if missing address/interests
+    // Check if user is a contractor first
     supabase
-      .from("profiles")
-      .select("postcode, interests")
-      .eq("id", user.id)
-      .single()
-      .then(({ data }) => {
-        const hasAddress = !!data?.postcode;
-        const hasInterests = Array.isArray((data as any)?.interests) && (data as any).interests.length > 0;
-        if (hasAddress && hasInterests) {
-          navigate("/dashboard", { replace: true });
-        } else {
-          navigate("/profile", { replace: true });
+      .from("contractors")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data: contractorData }) => {
+        if (contractorData) {
+          navigate("/contractor/profile", { replace: true });
+          return;
         }
+        // Otherwise treat as customer — redirect to /profile if missing address/interests
+        supabase
+          .from("profiles")
+          .select("postcode, interests")
+          .eq("id", user.id)
+          .single()
+          .then(({ data }) => {
+            const hasAddress = !!data?.postcode;
+            const hasInterests = Array.isArray((data as any)?.interests) && (data as any).interests.length > 0;
+            if (hasAddress && hasInterests) {
+              navigate("/dashboard", { replace: true });
+            } else {
+              navigate("/profile", { replace: true });
+            }
+          });
       });
   }, [user, navigate]);
 
