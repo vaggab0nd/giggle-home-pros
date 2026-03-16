@@ -80,9 +80,30 @@ const ContractorOnboarding = () => {
     );
   };
 
-  const isStep1Valid = businessName.trim() !== "" && postcode.trim() !== "" && phone.trim() !== "";
+  // Generous validation — blocks obviously bad/malicious input only
+  const validateStep1 = (): string | null => {
+    const name = businessName.trim();
+    if (name.length < 2) return "Business name must be at least 2 characters.";
+    if (name.length > 100) return "Business name must be under 100 characters.";
+    if (!/^\d{5}$/.test(postcode.trim())) return "Please enter a valid 5-digit ZIP code.";
+    const ph = phone.trim().replace(/[\s\-().+]/g, "");
+    if (!/^\d{7,15}$/.test(ph)) return "Please enter a valid phone number.";
+    return null;
+  };
+
+  const isStep1Valid = businessName.trim().length >= 2 && /^\d{5}$/.test(postcode) && phone.trim().length >= 7;
+
+  const handleStep1Continue = () => {
+    const err = validateStep1();
+    if (err) { toast({ title: "Please check your details", description: err, variant: "destructive" }); return; }
+    setStep(2);
+  };
 
   const handleSubmit = async () => {
+    if (!user) {
+      toast({ title: "You must be signed in to create a contractor profile.", variant: "destructive" });
+      return;
+    }
     if (expertise.length === 0) {
       toast({ title: "Select at least one expertise", variant: "destructive" });
       return;
@@ -91,7 +112,7 @@ const ContractorOnboarding = () => {
     setSaving(true);
 
     const { error } = await supabase.from("contractors" as any).insert({
-      user_id: user?.id ?? null,
+      user_id: user.id,
       business_name: businessName.trim(),
       postcode: postcode.trim(),
       phone: phone.trim(),
@@ -194,7 +215,7 @@ const ContractorOnboarding = () => {
 
                 <Button
                   className="w-full gap-2"
-                  onClick={() => setStep(2)}
+                  onClick={handleStep1Continue}
                   disabled={!isStep1Valid}
                 >
                   Continue <ArrowRight className="w-4 h-4" />
