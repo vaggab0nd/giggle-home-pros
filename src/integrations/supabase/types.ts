@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      contractors: {
+        Row: {
+          business_name: string
+          created_at: string
+          expertise: string[]
+          id: string
+          phone: string
+          postcode: string
+          user_id: string | null
+        }
+        Insert: {
+          business_name: string
+          created_at?: string
+          expertise?: string[]
+          id?: string
+          phone: string
+          postcode: string
+          user_id?: string | null
+        }
+        Update: {
+          business_name?: string
+          created_at?: string
+          expertise?: string[]
+          id?: string
+          phone?: string
+          postcode?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           city: string | null
