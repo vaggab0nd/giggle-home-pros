@@ -17,24 +17,37 @@ const Dashboard = () => {
     }
     if (!user) return;
 
-    // Check if setup is complete
+    // Contractors get their own dashboard
     supabase
-      .from("user_metadata")
-      .select("setup_complete")
-      .eq("id", user.id)
-      .single()
-      .then(({ data }) => {
-        if (data && !data.setup_complete) {
-          navigate("/setup", { replace: true });
+      .from("contractors" as any)
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data: contractorData }) => {
+        if (contractorData) {
+          navigate("/contractor/profile", { replace: true });
+          return;
         }
-      });
 
-    supabase
-      .from("profiles")
-      .select("full_name")
-      .eq("id", user.id)
-      .single()
-      .then(({ data }) => setProfile(data));
+        // Check if customer setup is complete
+        supabase
+          .from("user_metadata")
+          .select("setup_complete")
+          .eq("id", user.id)
+          .single()
+          .then(({ data }) => {
+            if (data && !data.setup_complete) {
+              navigate("/setup", { replace: true });
+            }
+          });
+
+        supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", user.id)
+          .single()
+          .then(({ data }) => setProfile(data));
+      });
   }, [user, loading, navigate]);
 
   if (loading || !user) return null;
@@ -50,6 +63,9 @@ const Dashboard = () => {
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <User className="w-4 h-4" />
               {profile?.full_name || user.email}
+              <span className="ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                Customer
+              </span>
             </div>
             <Button variant="ghost" size="sm" onClick={signOut} className="gap-1">
               <LogOut className="w-4 h-4" /> Sign out
