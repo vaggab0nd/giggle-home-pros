@@ -4,6 +4,7 @@ import { ContractorSidebar } from "@/components/contractor/ContractorSidebar";
 import { ActiveBids } from "@/components/contractor/ActiveBids";
 import { ProfileSettings } from "@/components/contractor/ProfileSettings";
 import { Verification } from "@/components/contractor/Verification";
+import Navbar from "@/components/Navbar";
 
 const PAGE_META: Record<string, { title: string; description: string }> = {
   "": { title: "Active Bids", description: "Track and manage your submitted bids." },
@@ -35,8 +36,10 @@ const ContractorProfile = () => {
   const segment = useSegment();
 
   return (
+    <div className="min-h-screen flex flex-col">
+      <Navbar variant="solid" />
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-secondary/30">
+      <div className="flex-1 flex w-full bg-secondary/30">
         <ContractorSidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <PageHeader segment={segment} />
@@ -69,6 +72,7 @@ const ContractorProfile = () => {
         </div>
       </div>
     </SidebarProvider>
+    </div>
   );
 };
 
