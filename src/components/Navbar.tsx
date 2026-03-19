@@ -56,6 +56,9 @@ const Navbar = ({ variant = "transparent" }: NavbarProps) => {
 
           {!loading && user && (
             <>
+              <span className="text-xs font-medium text-primary-foreground/60 truncate max-w-[140px]">
+                {displayName ?? user.email}
+              </span>
               <Link to="/dashboard" className="text-sm font-medium text-primary-foreground/80 hover:text-primary-foreground transition-colors">Dashboard</Link>
               <Link to="/profile" className="flex items-center gap-1.5 text-sm font-medium text-primary-foreground/80 hover:text-primary-foreground transition-colors">
                 <User className="w-4 h-4" /> Profile
