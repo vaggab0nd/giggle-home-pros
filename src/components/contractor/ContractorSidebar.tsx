@@ -20,6 +20,7 @@ import {
 const menuItems = [
   { title: "Job Feed", url: "/contractor/profile", icon: Flame },
   { title: "Active Bids", url: "/contractor/profile/bids", icon: Gavel },
+  { title: "My Reviews", url: "/contractor/profile/reviews", icon: Star },
   { title: "Profile Settings", url: "/contractor/profile/settings", icon: Settings },
   { title: "Verification", url: "/contractor/profile/verification", icon: Shield },
 ];
