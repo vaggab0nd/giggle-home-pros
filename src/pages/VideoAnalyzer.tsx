@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Upload, Video, Loader2, AlertTriangle, CheckCircle, X, Wrench, Package } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { TRADE_CATEGORIES } from "@/components/photo-analyzer/types";
+import TaskBreakdown from "@/components/photo-analyzer/TaskBreakdown";
 
 
 type VideoAnalysisResult = {
