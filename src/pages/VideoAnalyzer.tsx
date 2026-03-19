@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Upload, Video, Loader2, AlertTriangle, CheckCircle, X, Wrench, Package } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { TRADE_CATEGORIES } from "@/components/photo-analyzer/types";
+import TaskBreakdown from "@/components/photo-analyzer/TaskBreakdown";
 
 
 type VideoAnalysisResult = {
@@ -390,6 +391,14 @@ const VideoAnalyzer = () => {
                 </div>
               )}
             </div>
+
+            <TaskBreakdown
+              description={result.likely_issue || result.summary || ""}
+              problemType={result.trade_category}
+              urgency={result.urgency || (result.urgency_score != null ? String(result.urgency_score) : undefined)}
+              materialsInvolved={result.materials}
+              requiredTools={result.required_tools}
+            />
 
             <div className="flex gap-3">
               <Button variant="outline" onClick={clearFile} className="gap-2">

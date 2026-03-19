@@ -4,6 +4,7 @@ import { Camera } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AnalysisResult, PhotoFile } from "./types";
 import PhotoGrid from "./PhotoGrid";
+import TaskBreakdown from "./TaskBreakdown";
 
 type Props = {
   result: AnalysisResult;
@@ -86,6 +87,12 @@ const AnalysisResults = ({ result, photos, onClear }: Props) => {
           </div>
         )}
       </div>
+
+      <TaskBreakdown
+        description={result.likely_issue || ""}
+        urgency={result.urgency_score != null ? String(result.urgency_score) : undefined}
+        requiredTools={result.required_tools}
+      />
 
       <div className="flex gap-3">
         <Button variant="outline" onClick={onClear} className="gap-2">
