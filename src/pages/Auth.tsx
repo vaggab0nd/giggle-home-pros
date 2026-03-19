@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Mail, Lock, ArrowLeft } from "lucide-react";
 
-type View = "sign-in" | "sign-up";
+type View = "sign-in" | "sign-up" | "forgot-password";
 
 const Auth = () => {
   const [view, setView] = useState<View>("sign-in");
