@@ -186,7 +186,17 @@ const Auth = () => {
               </div>
             </div>
 
-            {view === "sign-up" && (
+            {view === "sign-in" && (
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={() => setView("forgot-password")}
+                  className="text-xs text-muted-foreground hover:text-primary hover:underline"
+                >
+                  Forgot your password?
+                </button>
+              </div>
+            )}
               <div>
                 <label className="text-sm font-medium text-foreground mb-1.5 block">Confirm password</label>
                 <div className="relative">
