@@ -9,12 +9,20 @@ import { Upload, Video, ArrowLeft, CheckCircle, AlertTriangle, Loader2, X } from
 
 type AnalysisResult = {
   summary?: string;
+  likely_issue?: string;
   urgency?: string;
+  urgency_score?: number;
   trade_category?: string;
   materials?: string[];
   estimated_cost_range?: string;
   recommendations?: string[];
+  required_tools?: string[];
+  estimated_parts?: string[];
   video_metadata?: Record<string, unknown>;
+  description?: string;
+  location_in_home?: string;
+  materials_components_visible?: string[];
+  clarifying_questions?: string[];
   [key: string]: unknown;
 };
 
@@ -123,6 +131,28 @@ const PostProject = () => {
       const data = await response.json() as AnalysisResult;
       setResult(data);
       setProgress(100);
+
+      // Save analysis to videos table
+      if (user) {
+        // Fetch customer location for the job posting
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("postcode, city, state")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        await supabase.from("videos" as any).insert({
+          user_id: user.id,
+          filename: file.name,
+          analysis_result: data,
+          status: "draft",
+          trade_category: data.trade_category || null,
+          description: data.likely_issue || data.summary || null,
+          postcode: profile?.postcode || null,
+          city: profile?.city || null,
+          state: profile?.state || null,
+        } as any);
+      }
 
       toast({ title: "Analysis complete!", description: "Your video has been processed." });
     } catch (err) {
@@ -323,11 +353,35 @@ const PostProject = () => {
             </div>
 
             <div className="flex gap-3">
+              <Button
+                onClick={async () => {
+                  // Update the most recent draft to 'posted'
+                  if (user) {
+                    const { data: drafts } = await supabase
+                      .from("videos" as any)
+                      .select("id")
+                      .eq("user_id", user.id)
+                      .eq("status", "draft")
+                      .order("created_at", { ascending: false })
+                      .limit(1);
+
+                    if (drafts && drafts.length > 0) {
+                      await supabase
+                        .from("videos" as any)
+                        .update({ status: "posted" } as any)
+                        .eq("id", (drafts[0] as any).id);
+                    }
+                  }
+                  toast({ title: "Project posted!", description: "Contractors can now see and bid on your project." });
+                  navigate("/dashboard");
+                }}
+                className="gap-2 flex-1"
+                size="lg"
+              >
+                <CheckCircle className="w-4 h-4" /> Post to Contractors
+              </Button>
               <Button variant="outline" onClick={clearFile} className="gap-2">
                 <Upload className="w-4 h-4" /> Upload Another
-              </Button>
-              <Button onClick={() => navigate("/dashboard")}>
-                Back to Dashboard
               </Button>
             </div>
           </div>

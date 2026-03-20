@@ -232,23 +232,41 @@ export type Database = {
       videos: {
         Row: {
           analysis_result: Json | null
+          city: string | null
           created_at: string
+          description: string | null
           filename: string
           id: string
+          postcode: string | null
+          state: string | null
+          status: string
+          trade_category: string | null
           user_id: string
         }
         Insert: {
           analysis_result?: Json | null
+          city?: string | null
           created_at?: string
+          description?: string | null
           filename: string
           id?: string
+          postcode?: string | null
+          state?: string | null
+          status?: string
+          trade_category?: string | null
           user_id: string
         }
         Update: {
           analysis_result?: Json | null
+          city?: string | null
           created_at?: string
+          description?: string | null
           filename?: string
           id?: string
+          postcode?: string | null
+          state?: string | null
+          status?: string
+          trade_category?: string | null
           user_id?: string
         }
         Relationships: []
