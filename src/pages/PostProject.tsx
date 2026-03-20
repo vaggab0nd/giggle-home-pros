@@ -205,7 +205,11 @@ const PostProject = () => {
 
   if (loading) return null;
 
-  const displayUrgency = result?.urgency_score ?? result?.urgency;
+  // Resolve actual Gemini fields with legacy fallbacks
+  const displayDescription = result?.description || result?.likely_issue || result?.summary;
+  const displayProblemType = result?.problem_type || result?.trade_category;
+  const displayMaterials = result?.materials_involved || result?.materials || result?.materials_components_visible;
+  const displayUrgency = result?.urgency;
 
   return (
     <div className="min-h-screen bg-background">
