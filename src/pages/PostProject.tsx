@@ -132,6 +132,28 @@ const PostProject = () => {
       setResult(data);
       setProgress(100);
 
+      // Save analysis to videos table
+      if (user) {
+        // Fetch customer location for the job posting
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("postcode, city, state")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        await supabase.from("videos" as any).insert({
+          user_id: user.id,
+          filename: file.name,
+          analysis_result: data,
+          status: "draft",
+          trade_category: data.trade_category || null,
+          description: data.likely_issue || data.summary || null,
+          postcode: profile?.postcode || null,
+          city: profile?.city || null,
+          state: profile?.state || null,
+        } as any);
+      }
+
       toast({ title: "Analysis complete!", description: "Your video has been processed." });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong";
