@@ -11,10 +11,27 @@ import { Upload, Video, ArrowLeft, CheckCircle, AlertTriangle, Loader2, X, Wrenc
 import { TRADE_CATEGORIES } from "@/components/photo-analyzer/types";
 import TaskBreakdown from "@/components/photo-analyzer/TaskBreakdown";
 
+type VideoMetadata = {
+  duration_seconds?: number;
+  width?: number;
+  height?: number;
+  latitude?: number;
+  longitude?: number;
+  location_source?: string;
+};
+
 type AnalysisResult = {
+  // Actual Gemini response fields
+  problem_type?: string;
+  description?: string;
+  location_in_home?: string;
+  urgency?: string; // "low" | "medium" | "high" | "emergency"
+  materials_involved?: string[];
+  clarifying_questions?: string[];
+  video_metadata?: VideoMetadata;
+  // Legacy/fallback fields the UI also checks
   summary?: string;
   likely_issue?: string;
-  urgency?: string;
   urgency_score?: number;
   trade_category?: string;
   materials?: string[];
@@ -22,30 +39,22 @@ type AnalysisResult = {
   recommendations?: string[];
   required_tools?: string[];
   estimated_parts?: string[];
-  video_metadata?: Record<string, unknown>;
-  description?: string;
-  location_in_home?: string;
   materials_components_visible?: string[];
-  clarifying_questions?: string[];
   [key: string]: unknown;
 };
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 
-const urgencyColor = (val: string | number) => {
-  const s = String(val).toLowerCase();
-  const n = typeof val === "number" ? val : parseInt(s, 10);
-  if (s.includes("high") || n >= 8) return "bg-destructive/10 text-destructive";
-  if (s.includes("medium") || n >= 5) return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300";
-  return "bg-primary/10 text-primary";
+const URGENCY_STYLES: Record<string, { bg: string; label: string }> = {
+  emergency: { bg: "bg-destructive/10 text-destructive", label: "🚨 Emergency" },
+  high: { bg: "bg-destructive/10 text-destructive", label: "High" },
+  medium: { bg: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300", label: "Medium" },
+  low: { bg: "bg-primary/10 text-primary", label: "Low" },
 };
 
-const urgencyLabel = (val: string | number) => {
-  const s = String(val).toLowerCase();
-  const n = typeof val === "number" ? val : parseInt(s, 10);
-  if (s.includes("high") || n >= 8) return typeof val === "number" ? `High (${val}/10)` : String(val);
-  if (s.includes("medium") || n >= 5) return typeof val === "number" ? `Medium (${val}/10)` : String(val);
-  return typeof val === "number" ? `Low (${val}/10)` : String(val);
+const getUrgencyStyle = (urgency: string) => {
+  const key = urgency.toLowerCase();
+  return URGENCY_STYLES[key] || { bg: "bg-muted text-muted-foreground", label: urgency };
 };
 
 const PostProject = () => {
@@ -176,8 +185,8 @@ const PostProject = () => {
           filename: file.name,
           analysis_result: data,
           status: "draft",
-          trade_category: data.trade_category || null,
-          description: data.likely_issue || data.summary || null,
+          trade_category: data.problem_type || data.trade_category || null,
+          description: data.description || data.likely_issue || data.summary || null,
           postcode: profile?.postcode || null,
           city: profile?.city || null,
           state: profile?.state || null,
@@ -196,7 +205,11 @@ const PostProject = () => {
 
   if (loading) return null;
 
-  const displayUrgency = result?.urgency_score ?? result?.urgency;
+  // Resolve actual Gemini fields with legacy fallbacks
+  const displayDescription = result?.description || result?.likely_issue || result?.summary;
+  const displayProblemType = result?.problem_type || result?.trade_category;
+  const displayMaterials = result?.materials_involved || result?.materials || result?.materials_components_visible;
+  const displayUrgency = result?.urgency;
 
   return (
     <div className="min-h-screen bg-background">
@@ -352,40 +365,41 @@ const PostProject = () => {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              {/* Summary / Likely Issue */}
-              {(result.summary || result.likely_issue) && (
+              {/* Description — main text block */}
+              {displayDescription && (
                 <div className="md:col-span-2 bg-card border border-border rounded-xl p-6">
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wide">
-                    {result.likely_issue ? "Likely Issue" : "Summary"}
-                  </h3>
-                  <p className="text-foreground text-lg font-semibold">
-                    {result.likely_issue || result.summary}
-                  </p>
-                  {result.likely_issue && result.summary && (
-                    <p className="text-muted-foreground mt-2">{result.summary}</p>
-                  )}
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wide">What We Found</h3>
+                  <p className="text-foreground text-lg font-semibold">{displayDescription}</p>
                 </div>
               )}
 
-              {/* Urgency */}
-              {displayUrgency != null && (
+              {/* Urgency badge */}
+              {displayUrgency && (
                 <div className="bg-card border border-border rounded-xl p-6">
                   <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wide">Urgency</h3>
-                  <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${urgencyColor(displayUrgency)}`}>
-                    {urgencyLabel(displayUrgency)}
+                  <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${getUrgencyStyle(displayUrgency).bg}`}>
+                    {getUrgencyStyle(displayUrgency).label}
                   </span>
                 </div>
               )}
 
-              {/* Trade Category */}
-              {result.trade_category && (
+              {/* Problem Type / Trade Category */}
+              {displayProblemType && (
                 <div className="bg-card border border-border rounded-xl p-6">
                   <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wide">Trade Category</h3>
-                  <p className="text-foreground font-semibold">{result.trade_category}</p>
+                  <p className="text-foreground font-semibold capitalize">{displayProblemType}</p>
                 </div>
               )}
 
-              {/* Estimated Cost */}
+              {/* Location in Home */}
+              {result.location_in_home && (
+                <div className="bg-card border border-border rounded-xl p-6">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wide">Location in Home</h3>
+                  <p className="text-foreground font-semibold capitalize">{result.location_in_home}</p>
+                </div>
+              )}
+
+              {/* Estimated Cost (if backend ever adds it) */}
               {result.estimated_cost_range && (
                 <div className="bg-card border border-border rounded-xl p-6">
                   <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wide">Estimated Cost</h3>
@@ -393,11 +407,17 @@ const PostProject = () => {
                 </div>
               )}
 
-              {/* Location in Home */}
-              {result.location_in_home && (
-                <div className="bg-card border border-border rounded-xl p-6">
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wide">Location</h3>
-                  <p className="text-foreground font-semibold">{result.location_in_home}</p>
+              {/* Materials Involved — shown as tags */}
+              {displayMaterials && displayMaterials.length > 0 && (
+                <div className="md:col-span-2 bg-card border border-border rounded-xl p-6">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">Materials Involved</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {displayMaterials.map((m, i) => (
+                      <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary text-foreground text-sm font-medium">
+                        <Package className="w-3.5 h-3.5 text-primary" /> {m}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -429,34 +449,6 @@ const PostProject = () => {
                 </div>
               )}
 
-              {/* Materials */}
-              {result.materials && result.materials.length > 0 && (
-                <div className="bg-card border border-border rounded-xl p-6">
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wide">Materials Needed</h3>
-                  <ul className="space-y-1">
-                    {result.materials.map((m, i) => (
-                      <li key={i} className="text-foreground text-sm flex items-start gap-2">
-                        <span className="text-primary mt-0.5">•</span> {m}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Materials/Components Visible */}
-              {result.materials_components_visible && result.materials_components_visible.length > 0 && (
-                <div className="bg-card border border-border rounded-xl p-6">
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wide">Visible Components</h3>
-                  <ul className="space-y-1">
-                    {result.materials_components_visible.map((m, i) => (
-                      <li key={i} className="text-foreground text-sm flex items-start gap-2">
-                        <span className="text-primary mt-0.5">•</span> {m}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
               {/* Recommendations */}
               {result.recommendations && result.recommendations.length > 0 && (
                 <div className="md:col-span-2 bg-card border border-border rounded-xl p-6">
@@ -471,25 +463,44 @@ const PostProject = () => {
                 </div>
               )}
 
-              {/* Clarifying Questions */}
+              {/* Clarifying Questions — checklist for the tradesman */}
               {result.clarifying_questions && result.clarifying_questions.length > 0 && (
                 <div className="md:col-span-2 bg-card border border-border rounded-xl p-6">
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wide">Questions to Consider</h3>
-                  <ul className="space-y-2">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">Questions for the Contractor</h3>
+                  <ul className="space-y-3">
                     {result.clarifying_questions.map((q, i) => (
-                      <li key={i} className="text-foreground text-sm flex items-start gap-2">
-                        <span className="text-primary font-semibold">{i + 1}.</span> {q}
+                      <li key={i} className="flex items-start gap-3 text-foreground text-sm">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">{i + 1}</span>
+                        <span>{q}</span>
                       </li>
                     ))}
                   </ul>
+                </div>
+              )}
+
+              {/* Video Metadata */}
+              {result.video_metadata && (
+                <div className="md:col-span-2 bg-card border border-border rounded-xl p-6">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wide">Video Details</h3>
+                  <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted-foreground">
+                    {result.video_metadata.duration_seconds != null && (
+                      <span>Duration: {Math.round(result.video_metadata.duration_seconds)}s</span>
+                    )}
+                    {result.video_metadata.width && result.video_metadata.height && (
+                      <span>Resolution: {result.video_metadata.width}×{result.video_metadata.height}</span>
+                    )}
+                    {result.video_metadata.latitude != null && result.video_metadata.longitude != null && (
+                      <span>GPS: {result.video_metadata.latitude.toFixed(4)}, {result.video_metadata.longitude.toFixed(4)}</span>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
 
             {/* Task Breakdown */}
             <TaskBreakdown
-              description={result.likely_issue || result.summary || ""}
-              urgency={result.urgency_score != null ? String(result.urgency_score) : result.urgency}
+              description={displayDescription || ""}
+              urgency={displayUrgency}
               requiredTools={result.required_tools}
             />
 
