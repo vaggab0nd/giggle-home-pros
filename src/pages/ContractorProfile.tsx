@@ -39,21 +39,6 @@ function useSegment() {
   return parts[parts.length - 1] === "profile" ? "" : parts[parts.length - 1];
 }
 
-function JobFeedPlaceholder() {
-  return (
-    <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
-        <Flame className="w-8 h-8 text-primary" />
-      </div>
-      <div>
-        <h2 className="text-xl font-heading font-bold text-foreground">Job Feed Coming Soon</h2>
-        <p className="text-sm text-muted-foreground mt-1 max-w-md">
-          Swipe through available jobs matched to your expertise. See AI-generated task lists and escrow amounts before you bid.
-        </p>
-      </div>
-    </div>
-  );
-}
 
 function ContractorReviews() {
   const { user } = useAuth();
