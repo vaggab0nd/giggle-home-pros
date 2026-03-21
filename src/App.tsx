@@ -23,6 +23,7 @@ import AIBiddingTools from "./pages/AIBiddingTools.tsx";
 import SameDayPayments from "./pages/SameDayPayments.tsx";
 import HowEscrowWorks from "./pages/HowEscrowWorks.tsx";
 import BrowseContractors from "./pages/BrowseContractors.tsx";
+import Install from "./pages/Install.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
