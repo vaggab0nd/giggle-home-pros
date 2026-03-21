@@ -71,7 +71,7 @@ const Dashboard = () => {
     <div className="min-h-screen flex flex-col">
       <Navbar variant="solid" />
       <SidebarProvider>
-        <div className="flex-1 flex w-full bg-secondary/30">
+        <div className="flex-1 flex w-full page-bg">
           <CustomerSidebar />
           <div className="flex-1 flex flex-col min-w-0">
             <PageHeader />
