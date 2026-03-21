@@ -89,6 +89,56 @@ export type Database = {
         }
         Relationships: []
       }
+      reviews: {
+        Row: {
+          comment: string | null
+          contractor_id: string
+          created_at: string
+          id: string
+          job_id: string
+          overall: number | null
+          private_feedback: string | null
+          rating_cleanliness: number
+          rating_communication: number
+          rating_quality: number
+          reviewer_id: string | null
+        }
+        Insert: {
+          comment?: string | null
+          contractor_id: string
+          created_at?: string
+          id?: string
+          job_id?: string
+          overall?: number | null
+          private_feedback?: string | null
+          rating_cleanliness: number
+          rating_communication: number
+          rating_quality: number
+          reviewer_id?: string | null
+        }
+        Update: {
+          comment?: string | null
+          contractor_id?: string
+          created_at?: string
+          id?: string
+          job_id?: string
+          overall?: number | null
+          private_feedback?: string | null
+          rating_cleanliness?: number
+          rating_communication?: number
+          rating_quality?: number
+          reviewer_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trades: {
         Row: {
           business_name: string
@@ -232,30 +282,94 @@ export type Database = {
       videos: {
         Row: {
           analysis_result: Json | null
+          city: string | null
           created_at: string
+          description: string | null
           filename: string
           id: string
+          postcode: string | null
+          state: string | null
+          status: string
+          trade_category: string | null
           user_id: string
         }
         Insert: {
           analysis_result?: Json | null
+          city?: string | null
           created_at?: string
+          description?: string | null
           filename: string
           id?: string
+          postcode?: string | null
+          state?: string | null
+          status?: string
+          trade_category?: string | null
           user_id: string
         }
         Update: {
           analysis_result?: Json | null
+          city?: string | null
           created_at?: string
+          description?: string | null
           filename?: string
           id?: string
+          postcode?: string | null
+          state?: string | null
+          status?: string
+          trade_category?: string | null
           user_id?: string
         }
         Relationships: []
       }
     }
     Views: {
-      [_ in never]: never
+      visible_reviews: {
+        Row: {
+          comment: string | null
+          contractor_id: string | null
+          created_at: string | null
+          id: string | null
+          job_id: string | null
+          overall: number | null
+          rating_cleanliness: number | null
+          rating_communication: number | null
+          rating_quality: number | null
+          reviewer_id: string | null
+        }
+        Insert: {
+          comment?: string | null
+          contractor_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          job_id?: string | null
+          overall?: number | null
+          rating_cleanliness?: number | null
+          rating_communication?: number | null
+          rating_quality?: number | null
+          reviewer_id?: string | null
+        }
+        Update: {
+          comment?: string | null
+          contractor_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          job_id?: string | null
+          overall?: number | null
+          rating_cleanliness?: number | null
+          rating_communication?: number | null
+          rating_quality?: number | null
+          reviewer_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       [_ in never]: never

@@ -33,14 +33,12 @@ import { useToast } from "@/hooks/use-toast";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function projectTitle(job: Job): string {
-  const trade = job.analysis_result?.trade_category as string | undefined;
-  const date = new Date(job.created_at).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-  });
-  if (trade) return `${trade} Issue – ${date}`;
-  return `Home Project – ${date}`;
+interface VideoProject {
+  id: string;
+  filename: string;
+  created_at: string;
+  status: string;
+  analysis_result: Record<string, unknown> | null;
 }
 
 // ─── Status display config ────────────────────────────────────────────────────
@@ -324,16 +322,19 @@ export function MyProjects() {
 
   const load = useCallback(async () => {
     if (!user) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await api.jobs.list();
-      setJobs(data);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load projects");
-    } finally {
-      setLoading(false);
-    }
+    supabase
+      .from("videos")
+      .select("id, filename, created_at, status, analysis_result")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .then(({ data, error: fetchError }) => {
+        if (fetchError) {
+          setError(fetchError.message);
+        } else {
+          setVideos((data as VideoProject[]) ?? []);
+        }
+        setLoading(false);
+      });
   }, [user]);
 
   useEffect(() => {
@@ -354,10 +355,15 @@ export function MyProjects() {
     }
   }, [load, selectedJob]);
 
-  const activeCount = jobs.filter(
-    (j) => j.status === "open" || j.status === "awarded" || j.status === "in_progress"
-  ).length;
-  const completedCount = jobs.filter((j) => j.status === "completed").length;
+  function projectTitle(v: VideoProject): string {
+    const r = v.analysis_result;
+    const trade = (r?.problem_type ?? r?.trade_category) as string | undefined;
+    const date = new Date(v.created_at).toLocaleDateString("en-GB", {
+      day: "numeric", month: "short",
+    });
+    if (trade) return `${trade.charAt(0).toUpperCase() + trade.slice(1)} Issue – ${date}`;
+    return `Home Project – ${date}`;
+  }
 
   return (
     <div className="space-y-6">
@@ -495,11 +501,155 @@ export function MyProjects() {
         </CardContent>
       </Card>
 
-      {/* Job detail sheet */}
-      <Sheet
-        open={!!selectedJob}
-        onOpenChange={(open) => !open && setSelectedJob(null)}
-      >
+      {/* Project detail sheet */}
+      <Sheet open={!!selectedProject} onOpenChange={(open) => !open && setSelectedProject(null)}>
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+          {selectedProject && (() => {
+            const r = selectedProject.analysis_result as Record<string, unknown> | null;
+            const urgency = (r?.urgency as string | undefined)?.toLowerCase();
+            const description = (r?.description ?? r?.summary) as string | undefined;
+            const problemType = (r?.problem_type ?? r?.trade_category) as string | undefined;
+            const locationInHome = r?.location_in_home as string | undefined;
+            const materials = (r?.materials_involved ?? r?.materials) as string[] | undefined;
+            const questions = r?.clarifying_questions as string[] | undefined;
+            const meta = r?.video_metadata as Record<string, unknown> | undefined;
+            const isPosted = selectedProject.status === "posted";
+
+            const urgencyStyle = urgency?.includes("emergency")
+              ? "bg-destructive/10 text-destructive"
+              : urgency?.includes("high")
+              ? "bg-destructive/10 text-destructive"
+              : urgency?.includes("medium")
+              ? "bg-accent/10 text-accent-foreground"
+              : "bg-primary/10 text-primary";
+
+            return (
+              <>
+                <SheetHeader className="mb-6">
+                  <SheetTitle className="font-heading">{projectTitle(selectedProject)}</SheetTitle>
+                  <p className="text-xs text-muted-foreground">
+                    Posted {new Date(selectedProject.created_at).toLocaleDateString("en-GB", {
+                      day: "numeric", month: "long", year: "numeric",
+                    })}
+                  </p>
+                  <Badge
+                    variant="outline"
+                    className={`mt-2 w-fit text-xs font-semibold ${isPosted
+                      ? "bg-primary/10 text-primary border-primary/20"
+                      : "bg-secondary text-muted-foreground border-border"
+                    }`}
+                  >
+                    {isPosted ? "✅ Live — Contractors can see this" : "📝 Draft — Not visible to contractors yet"}
+                  </Badge>
+                </SheetHeader>
+
+                {!r ? (
+                  <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+                    <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
+                    <p className="text-sm text-muted-foreground">Analysis in progress…</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Description */}
+                    {description && (
+                      <div className="bg-card border border-border rounded-xl p-5">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">AI Summary</p>
+                        <p className="text-sm text-foreground leading-relaxed">{description}</p>
+                      </div>
+                    )}
+
+                    {/* Key info grid */}
+                    <div className="grid grid-cols-2 gap-3">
+                      {urgency && (
+                        <div className="bg-card border border-border rounded-xl p-4">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Urgency</p>
+                          <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${urgencyStyle}`}>
+                            {urgency === "emergency" ? "🚨 Emergency" : urgency}
+                          </span>
+                        </div>
+                      )}
+
+                      {problemType && (
+                        <div className="bg-card border border-border rounded-xl p-4">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Trade</p>
+                          <p className="text-sm font-semibold text-foreground capitalize">{problemType}</p>
+                        </div>
+                      )}
+
+                      {locationInHome && (
+                        <div className="bg-card border border-border rounded-xl p-4">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Location</p>
+                          <p className="text-sm font-semibold text-foreground capitalize">{locationInHome}</p>
+                        </div>
+                      )}
+
+                      {meta?.duration_seconds && (
+                        <div className="bg-card border border-border rounded-xl p-4">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Video</p>
+                          <p className="text-sm font-semibold text-foreground">
+                            {Math.round(meta.duration_seconds as number)}s
+                            {meta.width && ` · ${meta.width}×${meta.height}`}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Materials */}
+                    {Array.isArray(materials) && materials.length > 0 && (
+                      <div className="bg-card border border-border rounded-xl p-5">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Materials Involved</p>
+                        <div className="flex flex-wrap gap-2">
+                          {materials.map((m, i) => (
+                            <Badge key={i} variant="secondary" className="text-xs">{m}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Clarifying questions */}
+                    {Array.isArray(questions) && questions.length > 0 && (
+                      <div className="bg-card border border-border rounded-xl p-5">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Questions for the Tradesperson</p>
+                        <ul className="space-y-2">
+                          {questions.map((q, i) => (
+                            <li key={i} className="text-sm text-foreground flex items-start gap-2">
+                              <Circle className="w-3 h-3 text-primary shrink-0 mt-1" /> {q}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Legacy fields fallback */}
+                    {r.estimated_cost_range && (
+                      <div className="bg-card border border-border rounded-xl p-4">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Estimated Cost</p>
+                        <p className="text-sm font-semibold text-foreground">{r.estimated_cost_range as string}</p>
+                      </div>
+                    )}
+
+                    {Array.isArray(r.recommendations) && r.recommendations.length > 0 && (
+                      <div className="bg-card border border-border rounded-xl p-5">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Recommendations</p>
+                        <ul className="space-y-2">
+                          {(r.recommendations as string[]).map((rec, i) => (
+                            <li key={i} className="text-sm text-foreground flex items-start gap-2">
+                              <CheckCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" /> {rec}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </SheetContent>
+      </Sheet>
+
+      {/* Review sheet — ready for when real completed jobs with contractor assignments exist */}
+      <Sheet open={!!reviewTarget} onOpenChange={(open) => !open && setReviewTarget(null)}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
           {selectedJob && (
             <JobDetail

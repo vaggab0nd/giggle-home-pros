@@ -1,263 +1,87 @@
-import { useState, useEffect, useCallback } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { api, Job } from "@/lib/api";
+import { Loader2, MapPin, Clock, AlertTriangle, Flame, Eye } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 import {
-  Flame,
-  Clock,
-  AlertTriangle,
-  Loader2,
-  Gavel,
-  X,
-  PoundSterling,
-  RefreshCw,
-} from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+type PostedJob = {
+  id: string;
+  filename: string;
+  created_at: string;
+  trade_category: string | null;
+  description: string | null;
+  postcode: string | null;
+  city: string | null;
+  state: string | null;
+  analysis_result: Record<string, unknown> | null;
+};
 
-function jobTitle(job: Job): string {
-  const trade = job.analysis_result?.trade_category as string | undefined;
-  const date = new Date(job.created_at).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-  });
-  return trade ? `${trade} Issue – ${date}` : `Home Project – ${date}`;
-}
-
-function urgencyClass(urgency: string): string {
-  if (urgency.toLowerCase().includes("high"))
-    return "bg-destructive/10 text-destructive";
-  if (urgency.toLowerCase().includes("medium"))
-    return "bg-accent/10 text-accent-foreground";
+const urgencyColor = (u: string | undefined) => {
+  if (!u) return "bg-muted text-muted-foreground";
+  const low = u.toLowerCase();
+  if (low.includes("high")) return "bg-destructive/10 text-destructive";
+  if (low.includes("medium")) return "bg-accent/20 text-accent-foreground";
   return "bg-primary/10 text-primary";
-}
-
-// ─── Bid form ─────────────────────────────────────────────────────────────────
-
-interface BidFormProps {
-  job: Job;
-  onClose: () => void;
-  onSuccess: () => void;
-}
-
-function BidForm({ job, onClose, onSuccess }: BidFormProps) {
-  const { toast } = useToast();
-  const [amountGbp, setAmountGbp] = useState("");
-  const [note, setNote] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-
-  const submit = async () => {
-    const pounds = parseFloat(amountGbp);
-    if (isNaN(pounds) || pounds <= 0) {
-      toast({
-        title: "Invalid amount",
-        description: "Enter a positive amount in £.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setSubmitting(true);
-    try {
-      await api.bids.submit(job.id, Math.round(pounds * 100), note.trim());
-      toast({
-        title: "Bid submitted!",
-        description: "The homeowner will be notified to review your bid.",
-      });
-      onSuccess();
-    } catch (e) {
-      toast({
-        title: "Failed to submit bid",
-        description: e instanceof Error ? e.message : "Something went wrong",
-        variant: "destructive",
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <Card className="border-primary/40 shadow-md">
-      <CardHeader className="pb-3 flex flex-row items-center justify-between">
-        <CardTitle className="text-base font-heading">
-          Bid on — {jobTitle(job)}
-        </CardTitle>
-        <Button variant="ghost" size="icon" onClick={onClose}>
-          <X className="w-4 h-4" />
-        </Button>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div>
-          <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block mb-1.5">
-            Your Price (£)
-          </label>
-          <div className="relative">
-            <PoundSterling className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              type="number"
-              min="1"
-              step="0.01"
-              placeholder="0.00"
-              value={amountGbp}
-              onChange={(e) => setAmountGbp(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-        </div>
-        <div>
-          <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block mb-1.5">
-            Scope of Work
-          </label>
-          <Textarea
-            placeholder="Describe what you'll do, your timeline, materials included, any conditions…"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            rows={4}
-          />
-        </div>
-        <div className="flex gap-2 justify-end">
-          <Button variant="outline" onClick={onClose} disabled={submitting}>
-            Cancel
-          </Button>
-          <Button
-            onClick={submit}
-            disabled={submitting || !amountGbp || !note.trim()}
-          >
-            {submitting ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Submitting…
-              </>
-            ) : (
-              <>
-                <Gavel className="w-4 h-4 mr-2" /> Submit Bid
-              </>
-            )}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-// ─── Job card ─────────────────────────────────────────────────────────────────
-
-interface JobCardProps {
-  job: Job;
-  isActiveBid: boolean;
-  onBid: () => void;
-}
-
-function JobCard({ job, isActiveBid, onBid }: JobCardProps) {
-  const r = job.analysis_result ?? {};
-  const trade = r.trade_category as string | undefined;
-  const summary = r.summary as string | undefined;
-  const urgency = r.urgency as string | undefined;
-  const cost = r.estimated_cost_range as string | undefined;
-
-  return (
-    <Card className="border-border shadow-sm hover:shadow-md transition-shadow">
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
-              {trade && (
-                <span className="text-xs font-bold uppercase tracking-wide text-primary">
-                  {trade}
-                </span>
-              )}
-              {urgency && (
-                <span
-                  className={`text-xs font-semibold px-2 py-0.5 rounded-full ${urgencyClass(urgency)}`}
-                >
-                  {urgency}
-                </span>
-              )}
-            </div>
-            <h3 className="text-sm font-semibold text-foreground">
-              {jobTitle(job)}
-            </h3>
-            {summary && (
-              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                {summary}
-              </p>
-            )}
-            <div className="flex items-center gap-3 mt-2 flex-wrap">
-              {cost && (
-                <span className="flex items-center gap-1 text-xs font-medium text-foreground">
-                  <PoundSterling className="w-3 h-3 text-muted-foreground" />{" "}
-                  Est. {cost}
-                </span>
-              )}
-              <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Clock className="w-3 h-3" />
-                {new Date(job.created_at).toLocaleDateString("en-GB", {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                })}
-              </span>
-            </div>
-          </div>
-          <Button
-            size="sm"
-            className="shrink-0"
-            onClick={onBid}
-            disabled={isActiveBid}
-          >
-            <Gavel className="w-3.5 h-3.5 mr-1.5" /> Bid
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-// ─── Job Feed ─────────────────────────────────────────────────────────────────
+};
 
 export function JobFeed() {
-  const [jobs, setJobs] = useState<Job[]>([]);
+  const { user } = useAuth();
+  const [jobs, setJobs] = useState<PostedJob[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [bidTarget, setBidTarget] = useState<Job | null>(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await api.jobs.list();
-      setJobs(data);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load jobs");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [error, setError] = useState(false);
+  const [selectedJob, setSelectedJob] = useState<PostedJob | null>(null);
+  const [expertise, setExpertise] = useState<string[]>([]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (!user) return;
+
+    // Fetch contractor expertise for matching
+    supabase
+      .from("contractors" as any)
+      .select("expertise")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) setExpertise((data as any).expertise || []);
+      });
+
+    // Fetch posted jobs
+    supabase
+      .from("videos" as any)
+      .select("id, filename, created_at, trade_category, description, postcode, city, state, analysis_result")
+      .eq("status", "posted")
+      .order("created_at", { ascending: false })
+      .then(({ data, error: fetchError }) => {
+        if (fetchError) {
+          setError(true);
+        } else {
+          setJobs((data as any) || []);
+        }
+        setLoading(false);
+      });
+  }, [user]);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24 text-muted-foreground text-sm gap-2">
-        <Loader2 className="w-4 h-4 animate-spin" /> Loading job feed…
+        <Loader2 className="w-4 h-4 animate-spin" /> Loading jobs…
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
-        <AlertTriangle className="w-8 h-8 text-destructive" />
-        <p className="text-sm font-medium text-foreground">
-          Failed to load job feed
-        </p>
-        <p className="text-xs text-muted-foreground">{error}</p>
-        <Button variant="outline" size="sm" onClick={load}>
-          <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Retry
-        </Button>
+      <div className="flex items-center justify-center py-24 gap-3 text-muted-foreground">
+        <AlertTriangle className="w-5 h-5 text-destructive" />
+        <span className="text-sm">Failed to load jobs. Try refreshing.</span>
       </div>
     );
   }
@@ -269,41 +93,192 @@ export function JobFeed() {
           <Flame className="w-8 h-8 text-primary" />
         </div>
         <div>
-          <h2 className="text-xl font-heading font-bold text-foreground">
-            No Open Jobs
-          </h2>
+          <h2 className="text-xl font-heading font-bold text-foreground">No Jobs Posted Yet</h2>
           <p className="text-sm text-muted-foreground mt-1 max-w-md">
-            Check back soon — jobs matching your expertise will appear here.
+            When customers post projects, they'll appear here matched to your expertise. Check back soon!
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={load}>
-          <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Refresh
-        </Button>
       </div>
     );
   }
 
-  return (
-    <div className="space-y-4">
-      {bidTarget && (
-        <BidForm
-          job={bidTarget}
-          onClose={() => setBidTarget(null)}
-          onSuccess={() => {
-            setBidTarget(null);
-            load();
-          }}
-        />
-      )}
+  // Sort: matching expertise first
+  const sorted = [...jobs].sort((a, b) => {
+    const aMatch = expertise.some(
+      (e) => a.trade_category?.toLowerCase() === e.toLowerCase()
+    );
+    const bMatch = expertise.some(
+      (e) => b.trade_category?.toLowerCase() === e.toLowerCase()
+    );
+    if (aMatch && !bMatch) return -1;
+    if (!aMatch && bMatch) return 1;
+    return 0;
+  });
 
-      {jobs.map((job) => (
-        <JobCard
-          key={job.id}
-          job={job}
-          isActiveBid={bidTarget?.id === job.id}
-          onBid={() => setBidTarget(job)}
-        />
-      ))}
-    </div>
+  return (
+    <>
+      <div className="space-y-3">
+        {sorted.map((job) => {
+          const analysis = job.analysis_result as Record<string, unknown> | null;
+          const urgency = (analysis?.urgency as string) || undefined;
+          const costRange = analysis?.estimated_cost_range as string | undefined;
+          const isMatch = expertise.some(
+            (e) => job.trade_category?.toLowerCase() === e.toLowerCase()
+          );
+
+          return (
+            <div
+              key={job.id}
+              className="bg-card border border-border rounded-xl p-5 hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => setSelectedJob(job)}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0 space-y-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {job.trade_category && (
+                      <Badge variant={isMatch ? "default" : "secondary"}>
+                        {job.trade_category}
+                      </Badge>
+                    )}
+                    {isMatch && (
+                      <Badge variant="outline" className="text-primary border-primary/30 text-[10px]">
+                        Matches your expertise
+                      </Badge>
+                    )}
+                    {urgency && (
+                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${urgencyColor(urgency)}`}>
+                        {urgency}
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="text-sm text-foreground line-clamp-2">
+                    {job.description || (analysis?.likely_issue as string) || (analysis?.summary as string) || "Video project"}
+                  </p>
+
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    {(job.city || job.postcode) && (
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        {[job.city, job.state, job.postcode].filter(Boolean).join(", ")}
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {formatDistanceToNow(new Date(job.created_at), { addSuffix: true })}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="text-right shrink-0 space-y-1">
+                  {costRange && (
+                    <p className="text-sm font-semibold text-foreground">{costRange}</p>
+                  )}
+                  <Button variant="ghost" size="sm" className="gap-1 text-xs">
+                    <Eye className="w-3 h-3" /> View
+                  </Button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Job detail dialog */}
+      <Dialog open={!!selectedJob} onOpenChange={(open) => !open && setSelectedJob(null)}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          {selectedJob && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-lg font-heading">
+                  {selectedJob.trade_category || "Project"} Job
+                </DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-4 mt-2">
+                {selectedJob.description && (
+                  <div>
+                    <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Description</h4>
+                    <p className="text-sm text-foreground">{selectedJob.description}</p>
+                  </div>
+                )}
+
+                {(() => {
+                  const a = selectedJob.analysis_result as Record<string, unknown> | null;
+                  if (!a) return null;
+                  return (
+                    <>
+                      {a.likely_issue && (
+                        <div>
+                          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">AI Diagnosis</h4>
+                          <p className="text-sm text-foreground">{a.likely_issue as string}</p>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-3">
+                        {a.urgency && (
+                          <div>
+                            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Urgency</h4>
+                            <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${urgencyColor(a.urgency as string)}`}>
+                              {a.urgency as string}
+                            </span>
+                          </div>
+                        )}
+                        {a.estimated_cost_range && (
+                          <div>
+                            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Est. Cost</h4>
+                            <p className="text-sm font-semibold text-foreground">{a.estimated_cost_range as string}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {Array.isArray(a.materials) && a.materials.length > 0 && (
+                        <div>
+                          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Materials</h4>
+                          <div className="flex flex-wrap gap-1.5">
+                            {(a.materials as string[]).map((m, i) => (
+                              <Badge key={i} variant="secondary" className="text-xs">{m}</Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {Array.isArray(a.recommendations) && a.recommendations.length > 0 && (
+                        <div>
+                          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Recommendations</h4>
+                          <ul className="space-y-1">
+                            {(a.recommendations as string[]).map((r, i) => (
+                              <li key={i} className="text-sm text-foreground">• {r}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+
+                {(selectedJob.city || selectedJob.postcode) && (
+                  <div>
+                    <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Location</h4>
+                    <p className="text-sm text-foreground flex items-center gap-1">
+                      <MapPin className="w-3.5 h-3.5" />
+                      {[selectedJob.city, selectedJob.state, selectedJob.postcode].filter(Boolean).join(", ")}
+                    </p>
+                  </div>
+                )}
+
+                <p className="text-xs text-muted-foreground">
+                  Posted {formatDistanceToNow(new Date(selectedJob.created_at), { addSuffix: true })}
+                </p>
+
+                <Button className="w-full" disabled>
+                  Bidding Coming Soon
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

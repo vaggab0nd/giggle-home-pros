@@ -3,23 +3,59 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Video, ArrowLeft, CheckCircle, AlertTriangle, Loader2, X, Gavel } from "lucide-react";
-import { api } from "@/lib/api";
+import { Upload, Video, ArrowLeft, CheckCircle, AlertTriangle, Loader2, X, Wrench, Package } from "lucide-react";
+import { TRADE_CATEGORIES } from "@/components/photo-analyzer/types";
+import TaskBreakdown from "@/components/photo-analyzer/TaskBreakdown";
+
+type VideoMetadata = {
+  duration_seconds?: number;
+  width?: number;
+  height?: number;
+  latitude?: number;
+  longitude?: number;
+  location_source?: string;
+};
 
 type AnalysisResult = {
+  // Actual Gemini response fields
+  problem_type?: string;
+  description?: string;
+  location_in_home?: string;
+  urgency?: string; // "low" | "medium" | "high" | "emergency"
+  materials_involved?: string[];
+  clarifying_questions?: string[];
+  video_metadata?: VideoMetadata;
+  // Legacy/fallback fields the UI also checks
   summary?: string;
-  urgency?: string;
+  likely_issue?: string;
+  urgency_score?: number;
   trade_category?: string;
   materials?: string[];
   estimated_cost_range?: string;
   recommendations?: string[];
-  video_metadata?: Record<string, unknown>;
+  required_tools?: string[];
+  estimated_parts?: string[];
+  materials_components_visible?: string[];
   [key: string]: unknown;
 };
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+
+const URGENCY_STYLES: Record<string, { bg: string; label: string }> = {
+  emergency: { bg: "bg-destructive/10 text-destructive", label: "🚨 Emergency" },
+  high: { bg: "bg-destructive/10 text-destructive", label: "High" },
+  medium: { bg: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300", label: "Medium" },
+  low: { bg: "bg-primary/10 text-primary", label: "Low" },
+};
+
+const getUrgencyStyle = (urgency: string) => {
+  const key = urgency.toLowerCase();
+  return URGENCY_STYLES[key] || { bg: "bg-muted text-muted-foreground", label: urgency };
+};
 
 const PostProject = () => {
   const { user, loading } = useAuth();
@@ -29,6 +65,8 @@ const PostProject = () => {
 
   const [file, setFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
+  const [description, setDescription] = useState("");
+  const [tradeCategory, setTradeCategory] = useState("");
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -73,6 +111,8 @@ const PostProject = () => {
     setFile(null);
     if (videoPreview) URL.revokeObjectURL(videoPreview);
     setVideoPreview(null);
+    setDescription("");
+    setTradeCategory("");
     setResult(null);
     setError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -87,6 +127,13 @@ const PostProject = () => {
     try {
       const formData = new FormData();
       formData.append("file", file);
+
+      if (description.trim().length >= 10) {
+        formData.append("description", description.trim());
+      }
+      if (tradeCategory && tradeCategory !== "_auto") {
+        formData.append("trade_category", tradeCategory);
+      }
 
       // Try to get browser location
       if ("geolocation" in navigator) {
@@ -117,14 +164,35 @@ const PostProject = () => {
 
       setProgress(90);
 
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(text || `Analysis failed (${response.status})`);
-      }
+      const data = await response.json();
+      console.log("[PostProject] API response:", JSON.stringify(data, null, 2));
 
-      const data = await response.json() as AnalysisResult;
-      setResult(data);
+      if (!response.ok) throw new Error(data?.error || `Analysis failed (${response.status})`);
+      if (data?.error) throw new Error(data.error);
+
+      setResult(data as AnalysisResult);
       setProgress(100);
+
+      // Save analysis to videos table
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("postcode, city, state")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        await supabase.from("videos" as any).insert({
+          user_id: user.id,
+          filename: file.name,
+          analysis_result: data,
+          status: "draft",
+          trade_category: data.problem_type || data.trade_category || null,
+          description: data.description || data.likely_issue || data.summary || null,
+          postcode: profile?.postcode || null,
+          city: profile?.city || null,
+          state: profile?.state || null,
+        } as any);
+      }
 
       toast({ title: "Analysis complete!", description: "Your video has been processed." });
     } catch (err) {
@@ -138,8 +206,14 @@ const PostProject = () => {
 
   if (loading) return null;
 
+  // Resolve actual Gemini fields with legacy fallbacks
+  const displayDescription = result?.description || result?.likely_issue || result?.summary;
+  const displayProblemType = result?.problem_type || result?.trade_category;
+  const displayMaterials = result?.materials_involved || result?.materials || result?.materials_components_visible;
+  const displayUrgency = result?.urgency;
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen page-bg">
       <header className="border-b border-border bg-card">
         <div className="max-w-4xl mx-auto flex items-center h-16 px-4 gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
@@ -210,6 +284,37 @@ const PostProject = () => {
                   </div>
                 </div>
 
+                {/* Description */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">
+                    Describe the problem <span className="text-muted-foreground font-normal">(min 10 characters)</span>
+                  </label>
+                  <Textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="e.g. Water is leaking from under the kitchen sink when the tap is running..."
+                    rows={3}
+                    className="resize-none"
+                  />
+                </div>
+
+                {/* Trade category */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Trade category</label>
+                  <Select value={tradeCategory} onValueChange={setTradeCategory}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Auto-detect (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TRADE_CATEGORIES.map((cat) => (
+                        <SelectItem key={cat.value || "_auto"} value={cat.value || "_auto"}>
+                          {cat.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 {uploading && (
                   <div className="space-y-2">
                     <Progress value={progress} className="h-2" />
@@ -253,7 +358,7 @@ const PostProject = () => {
         {result && (
           <div className="space-y-6">
             <div className="flex items-center gap-3">
-              <CheckCircle className="w-8 h-8 text-success" />
+              <CheckCircle className="w-8 h-8 text-primary" />
               <div>
                 <h2 className="text-2xl font-heading font-bold text-foreground">Analysis Complete</h2>
                 <p className="text-muted-foreground">Here's what our AI found</p>
@@ -261,35 +366,41 @@ const PostProject = () => {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              {result.summary && (
+              {/* Description — main text block */}
+              {displayDescription && (
                 <div className="md:col-span-2 bg-card border border-border rounded-xl p-6">
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wide">Summary</h3>
-                  <p className="text-foreground">{result.summary}</p>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wide">What We Found</h3>
+                  <p className="text-foreground text-lg font-semibold">{displayDescription}</p>
                 </div>
               )}
 
-              {result.urgency && (
+              {/* Urgency badge */}
+              {displayUrgency && (
                 <div className="bg-card border border-border rounded-xl p-6">
                   <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wide">Urgency</h3>
-                  <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
-                    result.urgency.toLowerCase().includes("high")
-                      ? "bg-destructive/10 text-destructive"
-                      : result.urgency.toLowerCase().includes("medium")
-                      ? "bg-accent/10 text-accent"
-                      : "bg-success/10 text-success"
-                  }`}>
-                    {result.urgency}
+                  <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${getUrgencyStyle(displayUrgency).bg}`}>
+                    {getUrgencyStyle(displayUrgency).label}
                   </span>
                 </div>
               )}
 
-              {result.trade_category && (
+              {/* Problem Type / Trade Category */}
+              {displayProblemType && (
                 <div className="bg-card border border-border rounded-xl p-6">
                   <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wide">Trade Category</h3>
-                  <p className="text-foreground font-semibold">{result.trade_category}</p>
+                  <p className="text-foreground font-semibold capitalize">{displayProblemType}</p>
                 </div>
               )}
 
+              {/* Location in Home */}
+              {result.location_in_home && (
+                <div className="bg-card border border-border rounded-xl p-6">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wide">Location in Home</h3>
+                  <p className="text-foreground font-semibold capitalize">{result.location_in_home}</p>
+                </div>
+              )}
+
+              {/* Estimated Cost (if backend ever adds it) */}
               {result.estimated_cost_range && (
                 <div className="bg-card border border-border rounded-xl p-6">
                   <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wide">Estimated Cost</h3>
@@ -297,71 +408,132 @@ const PostProject = () => {
                 </div>
               )}
 
-              {result.materials && result.materials.length > 0 && (
+              {/* Materials Involved — shown as tags */}
+              {displayMaterials && displayMaterials.length > 0 && (
+                <div className="md:col-span-2 bg-card border border-border rounded-xl p-6">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">Materials Involved</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {displayMaterials.map((m, i) => (
+                      <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary text-foreground text-sm font-medium">
+                        <Package className="w-3.5 h-3.5 text-primary" /> {m}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Required Tools */}
+              {result.required_tools && result.required_tools.length > 0 && (
                 <div className="bg-card border border-border rounded-xl p-6">
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wide">Materials Needed</h3>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wide">Required Tools</h3>
                   <ul className="space-y-1">
-                    {result.materials.map((m, i) => (
+                    {result.required_tools.map((tool, i) => (
                       <li key={i} className="text-foreground text-sm flex items-start gap-2">
-                        <span className="text-primary mt-0.5">•</span> {m}
+                        <Wrench className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" /> {tool}
                       </li>
                     ))}
                   </ul>
                 </div>
               )}
 
+              {/* Estimated Parts */}
+              {result.estimated_parts && result.estimated_parts.length > 0 && (
+                <div className="bg-card border border-border rounded-xl p-6">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wide">Estimated Parts</h3>
+                  <ul className="space-y-1">
+                    {result.estimated_parts.map((part, i) => (
+                      <li key={i} className="text-foreground text-sm flex items-start gap-2">
+                        <Package className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" /> {part}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Recommendations */}
               {result.recommendations && result.recommendations.length > 0 && (
                 <div className="md:col-span-2 bg-card border border-border rounded-xl p-6">
                   <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wide">Recommendations</h3>
                   <ul className="space-y-2">
                     {result.recommendations.map((r, i) => (
                       <li key={i} className="text-foreground text-sm flex items-start gap-2">
-                        <CheckCircle className="w-4 h-4 text-success flex-shrink-0 mt-0.5" /> {r}
+                        <CheckCircle className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" /> {r}
                       </li>
                     ))}
                   </ul>
                 </div>
               )}
+
+              {/* Clarifying Questions — checklist for the tradesman */}
+              {result.clarifying_questions && result.clarifying_questions.length > 0 && (
+                <div className="md:col-span-2 bg-card border border-border rounded-xl p-6">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">Questions for the Contractor</h3>
+                  <ul className="space-y-3">
+                    {result.clarifying_questions.map((q, i) => (
+                      <li key={i} className="flex items-start gap-3 text-foreground text-sm">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">{i + 1}</span>
+                        <span>{q}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Video Metadata */}
+              {result.video_metadata && (
+                <div className="md:col-span-2 bg-card border border-border rounded-xl p-6">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wide">Video Details</h3>
+                  <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted-foreground">
+                    {result.video_metadata.duration_seconds != null && (
+                      <span>Duration: {Math.round(result.video_metadata.duration_seconds)}s</span>
+                    )}
+                    {result.video_metadata.width && result.video_metadata.height && (
+                      <span>Resolution: {result.video_metadata.width}×{result.video_metadata.height}</span>
+                    )}
+                    {result.video_metadata.latitude != null && result.video_metadata.longitude != null && (
+                      <span>GPS: {result.video_metadata.latitude.toFixed(4)}, {result.video_metadata.longitude.toFixed(4)}</span>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row">
+            {/* Task Breakdown */}
+            <TaskBreakdown
+              description={displayDescription || ""}
+              urgency={displayUrgency}
+              requiredTools={result.required_tools}
+            />
+
+            <div className="flex gap-3">
               <Button
                 onClick={async () => {
-                  if (!result) return;
-                  setPosting(true);
-                  try {
-                    const job = await api.jobs.create(result as Record<string, unknown>);
-                    await api.jobs.updateStatus(job.id, "open");
-                    toast({
-                      title: "Job posted!",
-                      description: "Contractors can now see your job and submit bids.",
-                    });
-                    navigate("/dashboard");
-                  } catch (e) {
-                    toast({
-                      title: "Failed to post job",
-                      description: e instanceof Error ? e.message : "Something went wrong",
-                      variant: "destructive",
-                    });
-                  } finally {
-                    setPosting(false);
+                  if (user) {
+                    const { data: drafts } = await supabase
+                      .from("videos" as any)
+                      .select("id")
+                      .eq("user_id", user.id)
+                      .eq("status", "draft")
+                      .order("created_at", { ascending: false })
+                      .limit(1);
+
+                    if (drafts && drafts.length > 0) {
+                      await supabase
+                        .from("videos" as any)
+                        .update({ status: "posted" } as any)
+                        .eq("id", (drafts[0] as any).id);
+                    }
                   }
+                  toast({ title: "Project posted!", description: "Contractors can now see and bid on your project." });
+                  navigate("/dashboard");
                 }}
-                disabled={posting}
-                className="gap-2 flex-1 sm:flex-none"
+                className="gap-2 flex-1"
                 size="lg"
               >
-                {posting ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" /> Posting…</>
-                ) : (
-                  <><Gavel className="w-4 h-4" /> Post for Bids</>
-                )}
+                <CheckCircle className="w-4 h-4" /> Post to Contractors
               </Button>
               <Button variant="outline" onClick={clearFile} className="gap-2">
                 <Upload className="w-4 h-4" /> Upload Another
-              </Button>
-              <Button variant="ghost" onClick={() => navigate("/dashboard")}>
-                Back to Dashboard
               </Button>
             </div>
           </div>

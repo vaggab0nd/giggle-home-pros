@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import { Loader2 } from "lucide-react";
+import { JobFeed } from "@/components/contractor/JobFeed";
 
 const PAGE_META: Record<string, { title: string; description: string }> = {
   "": { title: "Job Feed", description: "Browse available jobs matching your expertise." },
@@ -39,6 +40,7 @@ function useSegment() {
   const parts = loc.pathname.replace(/\/$/, "").split("/");
   return parts[parts.length - 1] === "profile" ? "" : parts[parts.length - 1];
 }
+
 
 function ContractorReviews() {
   const { user } = useAuth();
@@ -80,7 +82,7 @@ const ContractorProfile = () => {
     <div className="min-h-screen flex flex-col">
       <Navbar variant="solid" />
       <SidebarProvider>
-        <div className="flex-1 flex w-full bg-secondary/30">
+        <div className="flex-1 flex w-full page-bg">
           <ContractorSidebar />
           <div className="flex-1 flex flex-col min-w-0">
             <PageHeader segment={segment} />
