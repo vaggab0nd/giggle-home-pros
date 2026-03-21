@@ -32,6 +32,7 @@ interface VideoProject {
   id: string;
   filename: string;
   created_at: string;
+  status: string;
   analysis_result: Record<string, unknown> | null;
 }
 
