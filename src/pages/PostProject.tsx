@@ -212,7 +212,7 @@ const PostProject = () => {
   const displayUrgency = result?.urgency;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen page-bg">
       <header className="border-b border-border bg-card">
         <div className="max-w-4xl mx-auto flex items-center h-16 px-4 gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
