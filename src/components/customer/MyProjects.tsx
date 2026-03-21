@@ -96,11 +96,12 @@ export function MyProjects() {
   const completedCount = analyzedVideos.length;
 
   function projectTitle(v: VideoProject): string {
-    const trade = v.analysis_result?.trade_category as string | undefined;
+    const r = v.analysis_result;
+    const trade = (r?.problem_type ?? r?.trade_category) as string | undefined;
     const date = new Date(v.created_at).toLocaleDateString("en-GB", {
       day: "numeric", month: "short",
     });
-    if (trade) return `${trade} Issue – ${date}`;
+    if (trade) return `${trade.charAt(0).toUpperCase() + trade.slice(1)} Issue – ${date}`;
     return `Home Project – ${date}`;
   }
 
