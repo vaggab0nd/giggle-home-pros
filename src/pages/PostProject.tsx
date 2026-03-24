@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
+import type { RfpDocument, MatchResponse, Job } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,6 +12,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Upload, Video, ArrowLeft, CheckCircle, AlertTriangle, Loader2, X, Wrench, Package } from "lucide-react";
 import { TRADE_CATEGORIES } from "@/components/photo-analyzer/types";
 import TaskBreakdown from "@/components/photo-analyzer/TaskBreakdown";
+import { ClarificationsStep } from "@/components/post-project/ClarificationsStep";
+import { RfpReviewStep } from "@/components/post-project/RfpReviewStep";
+import { MatchedContractorsStep } from "@/components/post-project/MatchedContractorsStep";
 
 type VideoMetadata = {
   duration_seconds?: number;
