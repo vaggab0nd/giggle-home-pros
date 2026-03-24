@@ -112,6 +112,8 @@ export function ProfileSettings() {
       toast({ title: "Error saving", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Profile saved", description: "Your business details have been updated." });
+      // Silently embed profile for AI matching
+      api.contractor.embedProfile().catch(() => {});
       navigate("/contractor/profile");
     }
   };
