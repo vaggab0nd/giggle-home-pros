@@ -130,4 +130,21 @@ export const api = {
 
     mine: () => request<Bid[]>("/me/bids"),
   },
+
+  rfp: {
+    generate: (jobId: string, clarificationAnswers: Record<string, string>) =>
+      request<RfpResponse>(`/jobs/${jobId}/rfp`, {
+        method: "POST",
+        body: JSON.stringify({ clarification_answers: clarificationAnswers }),
+      }),
+  },
+
+  matching: {
+    get: (jobId: string) => request<MatchResponse>(`/jobs/${jobId}/contractors/matches`),
+  },
+
+  contractor: {
+    embedProfile: () =>
+      request<{ ok: boolean }>("/me/contractor/embed-profile", { method: "POST" }),
+  },
 };
