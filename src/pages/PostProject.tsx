@@ -77,6 +77,12 @@ const PostProject = () => {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
+  // Post-analysis flow state
+  type PostAnalysisStep = "analysis" | "clarifications" | "rfp" | "matches";
+  const [postStep, setPostStep] = useState<PostAnalysisStep>("analysis");
+  const [createdJob, setCreatedJob] = useState<Job | null>(null);
+  const [rfpDoc, setRfpDoc] = useState<RfpDocument | null>(null);
+  const [matchData, setMatchData] = useState<MatchResponse | null>(null);
 
   useEffect(() => {
     if (!loading && !user) navigate("/auth", { replace: true });
