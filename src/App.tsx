@@ -24,6 +24,8 @@ import SameDayPayments from "./pages/SameDayPayments.tsx";
 import HowEscrowWorks from "./pages/HowEscrowWorks.tsx";
 import BrowseContractors from "./pages/BrowseContractors.tsx";
 import Install from "./pages/Install.tsx";
+import ConnectReturn from "./pages/ConnectReturn.tsx";
+import ConnectRefresh from "./pages/ConnectRefresh.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
