@@ -24,6 +24,7 @@ const fileToBase64 = (file: File): Promise<string> =>
 const TradePhotoAnalyzer = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, loading } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [photos, setPhotos] = useState<PhotoFile[]>([]);
