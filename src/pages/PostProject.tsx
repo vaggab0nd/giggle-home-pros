@@ -176,7 +176,7 @@ const PostProject = () => {
       setProgress(90);
 
       const data = await response.json();
-      console.log("[PostProject] API response:", JSON.stringify(data, null, 2));
+      if (import.meta.env.DEV) console.log("[PostProject] API response:", JSON.stringify(data, null, 2));
 
       if (!response.ok) throw new Error(data?.error || `Analysis failed (${response.status})`);
       if (data?.error) throw new Error(data.error);
