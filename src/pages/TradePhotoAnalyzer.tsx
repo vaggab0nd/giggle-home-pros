@@ -1,9 +1,11 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Upload, Camera, Loader2, AlertTriangle, ImageIcon } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import PhotoGrid from "@/components/photo-analyzer/PhotoGrid";
@@ -22,6 +24,7 @@ const fileToBase64 = (file: File): Promise<string> =>
 const TradePhotoAnalyzer = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, loading } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [photos, setPhotos] = useState<PhotoFile[]>([]);
@@ -30,6 +33,12 @@ const TradePhotoAnalyzer = () => {
   const [analysing, setAnalysing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate("/auth", { replace: true });
+    }
+  }, [user, loading, navigate]);
 
   const addPhotos = (files: FileList | File[]) => {
     const incoming = Array.from(files);
@@ -95,14 +104,11 @@ const TradePhotoAnalyzer = () => {
       };
       if (tradeCategory) payload.trade_category = tradeCategory;
 
-      const response = await fetch("https://stable-gig-7xgcwnxkrq-ew.a.run.app/analyse/photos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      const { data, error: fnError } = await supabase.functions.invoke("analyse-photos", {
+        body: payload,
       });
 
-      const data = await response.json();
-      if (!response.ok) throw new Error(data?.error || `Server error ${response.status}`);
+      if (fnError) throw new Error(fnError.message || "Analysis failed");
       if (data?.error) throw new Error(data.error);
 
       setResult(data as AnalysisResult);
