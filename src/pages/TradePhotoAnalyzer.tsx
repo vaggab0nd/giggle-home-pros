@@ -104,14 +104,11 @@ const TradePhotoAnalyzer = () => {
       };
       if (tradeCategory) payload.trade_category = tradeCategory;
 
-      const response = await fetch("https://stable-gig-7xgcwnxkrq-ew.a.run.app/analyse/photos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      const { data, error: fnError } = await supabase.functions.invoke("analyse-photos", {
+        body: payload,
       });
 
-      const data = await response.json();
-      if (!response.ok) throw new Error(data?.error || `Server error ${response.status}`);
+      if (fnError) throw new Error(fnError.message || "Analysis failed");
       if (data?.error) throw new Error(data.error);
 
       setResult(data as AnalysisResult);
