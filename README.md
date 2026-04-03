@@ -1,8 +1,8 @@
-# Giggle Home Pros
+# KisX - Home Services Marketplace
 
 A marketplace connecting homeowners with trusted contractors for home repair and improvement projects.
 
-**Live app:** https://giggle-home-pros.lovable.app
+**Live app:** https://kisx.lovable.app
 
 ## What it does
 
@@ -31,7 +31,7 @@ A marketplace connecting homeowners with trusted contractors for home repair and
 - **Frontend:** React 18, TypeScript, Vite
 - **UI:** shadcn/ui, Tailwind CSS, Radix UI
 - **Backend:** Supabase (Postgres + Auth + Edge Functions)
-- **AI analysis:** Cloud Run endpoint (`stable-gig`) — called directly from the browser for video, via edge function proxy for photos
+- **AI analysis:** Cloud Run endpoint (KisX backend) — called directly from the browser for video, via edge function proxy for photos
 - **Routing:** React Router v6
 - **State:** TanStack Query
 - **PWA:** Web app manifest and service worker managed by Lovable's deployment platform — installable on iOS/Android
@@ -40,7 +40,7 @@ A marketplace connecting homeowners with trusted contractors for home repair and
 
 ```sh
 git clone <repo-url>
-cd giggle-home-pros
+cd KisX
 npm install
 npm run dev
 ```

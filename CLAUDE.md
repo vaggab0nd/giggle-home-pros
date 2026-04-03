@@ -1,9 +1,9 @@
-# Claude Code Guide — Giggle Home Pros
+# Claude Code Guide — KisX - Home Services Marketplace
 
 ## Repositories
 
-- **Frontend (this repo):** `vaggab0nd/giggle-home-pros`
-- **Backend (Supabase edge functions & DB):** https://github.com/vaggab0nd/stable-gig
+- **Frontend (this repo):** `vaggab0nd/KisX`
+- **Backend (Supabase edge functions & DB):** https://github.com/vaggab0nd/KisX-backend
 
 ## Architecture
 
