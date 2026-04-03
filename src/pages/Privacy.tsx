@@ -27,7 +27,7 @@ const Privacy = () => (
         </section>
         <section className="bg-card rounded-xl border border-border p-6">
           <h2 className="text-xl font-bold font-heading text-foreground mb-2">5. Your Rights</h2>
-          <p>You may request access to, correction of, or deletion of your personal data at any time by contacting us at support@stablegig.com.</p>
+          <p>You may request access to, correction of, or deletion of your personal data at any time by contacting us at support@kisx.com.</p>
         </section>
         <section className="bg-card rounded-xl border border-border p-6">
           <h2 className="text-xl font-bold font-heading text-foreground mb-2">6. Contact</h2>
