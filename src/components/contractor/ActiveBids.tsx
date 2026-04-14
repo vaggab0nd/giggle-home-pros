@@ -259,7 +259,26 @@ export function ActiveBids() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3 shrink-0 ml-4">
+                      <div className="flex items-center gap-2 shrink-0 ml-4">
+                        {bid.status === "pending" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1 text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/5 h-7 text-xs"
+                            disabled={withdrawingId === bid.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleWithdraw(bid);
+                            }}
+                          >
+                            {withdrawingId === bid.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-3 h-3" />
+                            )}
+                            Withdraw
+                          </Button>
+                        )}
                         <span className="text-sm font-bold text-foreground">
                           {pounds}
                         </span>
