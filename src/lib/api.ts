@@ -110,6 +110,21 @@ export interface Milestone {
   created_at: string;
 }
 
+export type DocumentType = "insurance" | "licence" | "certification" | "other";
+export type DocumentStatus = "verified" | "needs_review" | "expired";
+
+export interface ContractorDocument {
+  id: string;
+  contractor_id: string;
+  document_type: DocumentType;
+  file_name: string;
+  file_source?: string;
+  status: DocumentStatus;
+  extracted_data?: Record<string, unknown> | null;
+  expires_at?: string | null;
+  created_at: string;
+}
+
 export type EscrowStatusValue = "pending" | "held" | "funds_released" | "refunded";
 
 export interface EscrowStatus {
