@@ -21,6 +21,20 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const text = await res.text();
     throw new Error(text || `Request failed (${res.status})`);
   }
+  if (res.status === 204) return undefined as T;
+  return res.json() as Promise<T>;
+}
+
+async function publicRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    ...init,
+    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `Request failed (${res.status})`);
+  }
+  if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
 
@@ -107,6 +121,21 @@ export interface Milestone {
   order_index: number;
   status: MilestoneStatus;
   photos: MilestonePhoto[];
+  created_at: string;
+}
+
+export type DocumentType = "insurance" | "licence" | "certification" | "other";
+export type DocumentStatus = "verified" | "needs_review" | "expired";
+
+export interface ContractorDocument {
+  id: string;
+  contractor_id: string;
+  document_type: DocumentType;
+  file_name: string;
+  file_source?: string;
+  status: DocumentStatus;
+  extracted_data?: Record<string, unknown> | null;
+  expires_at?: string | null;
   created_at: string;
 }
 
@@ -296,5 +325,21 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ reason: reason ?? "" }),
       }),
+  },
+
+  documents: {
+    upload: (payload: { document_type: DocumentType; file_name: string; file_source: string }) =>
+      request<ContractorDocument>("/contractors/me/documents", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+
+    listMine: () => request<ContractorDocument[]>("/contractors/me/documents"),
+
+    listPublic: (contractorId: string) =>
+      publicRequest<ContractorDocument[]>(`/contractors/${contractorId}/documents`),
+
+    remove: (docId: string) =>
+      request<void>(`/contractors/me/documents/${docId}`, { method: "DELETE" }),
   },
 };

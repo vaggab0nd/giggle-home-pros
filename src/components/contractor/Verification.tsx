@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { ContractorDocuments } from "@/components/contractor/ContractorDocuments";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -138,6 +139,8 @@ export function Verification() {
           </Button>
         </CardContent>
       </Card>
+
+      <ContractorDocuments />
     </div>
   );
 }

@@ -15,6 +15,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { ReviewMediator } from "@/components/ReviewMediator";
+import { api, type ContractorDocument } from "@/lib/api";
 import {
   Building2,
   MapPin,
@@ -23,7 +24,92 @@ import {
   Loader2,
   AlertTriangle,
   ChevronRight,
+  ShieldCheck,
+  Calendar,
 } from "lucide-react";
+
+const DOC_TYPE_PUBLIC_LABEL: Record<string, string> = {
+  insurance: "Public Liability Insurance",
+  licence: "Trade Licence",
+  certification: "Certification",
+  other: "Document",
+};
+
+function formatExpiryShort(iso?: string | null): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString(undefined, { month: "short", year: "numeric" });
+}
+
+function PublicVerifiedDocs({ contractorId }: { contractorId: string }) {
+  const [docs, setDocs] = useState<ContractorDocument[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    api.documents
+      .listPublic(contractorId)
+      .then((list) => {
+        if (!cancelled) setDocs(list);
+      })
+      .catch(() => {
+        if (!cancelled) setDocs([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [contractorId]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <Loader2 className="w-3 h-3 animate-spin" /> Loading credentials…
+      </div>
+    );
+  }
+
+  if (docs.length === 0) {
+    return (
+      <div className="rounded-lg border border-dashed border-border p-4 text-xs text-muted-foreground">
+        No verified credentials on file yet.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Verified credentials
+      </h3>
+      <ul className="space-y-2">
+        {docs.map((d) => {
+          const label = DOC_TYPE_PUBLIC_LABEL[d.document_type] ?? "Document";
+          const expiry = formatExpiryShort(d.expires_at);
+          return (
+            <li
+              key={d.id}
+              className="flex items-start gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3"
+            >
+              <ShieldCheck className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground">{label} verified</p>
+                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                  <Calendar className="w-3 h-3" />
+                  {expiry ? `expires ${expiry}` : "no expiry"}
+                </p>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
 
 interface ContractorRow {
   id: string;
@@ -271,14 +357,17 @@ const BrowseContractors = () => {
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
           <SheetHeader className="mb-6">
             <SheetTitle className="font-heading">
-              {reviewTarget?.businessName} — Reviews
+              {reviewTarget?.businessName}
             </SheetTitle>
           </SheetHeader>
           {reviewTarget && (
-            <ReviewMediator
-              contractorId={reviewTarget.contractorId}
-              mode="list"
-            />
+            <div className="space-y-6">
+              <PublicVerifiedDocs contractorId={reviewTarget.contractorId} />
+              <ReviewMediator
+                contractorId={reviewTarget.contractorId}
+                mode="list"
+              />
+            </div>
           )}
         </SheetContent>
       </Sheet>
