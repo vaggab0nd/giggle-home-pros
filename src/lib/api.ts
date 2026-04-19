@@ -326,4 +326,20 @@ export const api = {
         body: JSON.stringify({ reason: reason ?? "" }),
       }),
   },
+
+  documents: {
+    upload: (payload: { document_type: DocumentType; file_name: string; file_source: string }) =>
+      request<ContractorDocument>("/contractors/me/documents", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+
+    listMine: () => request<ContractorDocument[]>("/contractors/me/documents"),
+
+    listPublic: (contractorId: string) =>
+      publicRequest<ContractorDocument[]>(`/contractors/${contractorId}/documents`),
+
+    remove: (docId: string) =>
+      request<void>(`/contractors/me/documents/${docId}`, { method: "DELETE" }),
+  },
 };
