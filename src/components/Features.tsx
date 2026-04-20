@@ -23,6 +23,7 @@ const features = [
     icon: Star,
     title: "Vetted Contractors",
     description: "Every contractor is verified with license checks, reviews, and performance history before joining.",
+    link: "/cslb-check",
   },
 ];
 
