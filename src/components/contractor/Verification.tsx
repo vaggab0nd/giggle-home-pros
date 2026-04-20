@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Shield, Save, CheckCircle2, AlertCircle } from "lucide-react";
+import { CslbStatusBadge } from "@/components/contractor/CslbStatusBadge";
 
 export function Verification() {
   const { user } = useAuth();
@@ -105,12 +106,17 @@ export function Verification() {
 
       <Card className="border-border">
         <CardHeader>
-          <CardTitle className="text-lg font-heading flex items-center gap-2">
-            <Shield className="w-4 h-4 text-primary" /> Verification Details
-          </CardTitle>
-          <CardDescription>
-            Adding your license and insurance helps you win more bids and builds trust with homeowners.
-          </CardDescription>
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <CardTitle className="text-lg font-heading flex items-center gap-2">
+                <Shield className="w-4 h-4 text-primary" /> Verification Details
+              </CardTitle>
+              <CardDescription>
+                Adding your license and insurance helps you win more bids and builds trust with homeowners.
+              </CardDescription>
+            </div>
+            {contractorId && <CslbStatusBadge contractorId={contractorId} variant="full" />}
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>

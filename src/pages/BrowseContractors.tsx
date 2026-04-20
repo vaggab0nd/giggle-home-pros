@@ -17,6 +17,7 @@ import {
 import { ReviewMediator } from "@/components/ReviewMediator";
 import { api, type ContractorDocument } from "@/lib/api";
 import { VerifiedDocsBadge } from "@/components/contractor/VerifiedDocsBadge";
+import { CslbStatusBadge } from "@/components/contractor/CslbStatusBadge";
 import {
   Building2,
   MapPin,
@@ -288,6 +289,7 @@ const BrowseContractors = () => {
                             Verified
                           </Badge>
                         )}
+                        <CslbStatusBadge contractorId={c.id} />
                         <VerifiedDocsBadge contractorId={c.id} />
                       </div>
 
@@ -364,6 +366,9 @@ const BrowseContractors = () => {
           </SheetHeader>
           {reviewTarget && (
             <div className="space-y-6">
+              <div className="flex flex-wrap gap-2">
+                <CslbStatusBadge contractorId={reviewTarget.contractorId} variant="full" />
+              </div>
               <PublicVerifiedDocs contractorId={reviewTarget.contractorId} />
               <ReviewMediator
                 contractorId={reviewTarget.contractorId}
