@@ -249,6 +249,74 @@ const ContractorOnboarding = () => {
                 </div>
 
                 <div className="space-y-4">
+                  {/* CSLB Licence Lookup */}
+                  <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
+                    <div>
+                      <Label htmlFor="licence" className="flex items-center gap-1.5">
+                        <ShieldCheck className="w-4 h-4 text-primary" />
+                        CSLB Licence Number
+                        <span className="text-xs text-muted-foreground font-normal">(optional but recommended)</span>
+                      </Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Verify your California licence to auto-fill your business name and earn a verified badge.
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        id="licence"
+                        value={licenceNumber}
+                        onChange={(e) => {
+                          setLicenceNumber(e.target.value);
+                          setLicenceError(null);
+                          setLicenceData(null);
+                        }}
+                        placeholder="e.g. 1000002"
+                        inputMode="numeric"
+                        disabled={licenceLoading}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={verifyLicence}
+                        disabled={licenceLoading || !licenceNumber.trim()}
+                        className="shrink-0"
+                      >
+                        {licenceLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                        Verify
+                      </Button>
+                    </div>
+                    {licenceError && (
+                      <div className="flex items-start gap-2 text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-md p-2">
+                        <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
+                        <span>{licenceError}</span>
+                      </div>
+                    )}
+                    {licenceData && (
+                      <div className="rounded-md border bg-card p-3 space-y-1.5">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <span className="font-semibold text-sm">{licenceData.business_name}</span>
+                          <Badge
+                            className={
+                              licenceData.is_active
+                                ? "bg-green-100 text-green-800 border-green-300 hover:bg-green-100"
+                                : "bg-red-100 text-red-800 border-red-300 hover:bg-red-100"
+                            }
+                          >
+                            {licenceData.is_active ? <ShieldCheck className="w-3 h-3 mr-1" /> : <ShieldAlert className="w-3 h-3 mr-1" />}
+                            {licenceData.primary_status}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Licence #{licenceData.licence_number}
+                          {licenceData.expiration_date && <> · Expires {new Date(licenceData.expiration_date).toLocaleDateString()}</>}
+                        </p>
+                        {licenceData.classifications && (
+                          <p className="text-xs text-muted-foreground">Classes: {licenceData.classifications}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
                   <div>
                     <Label htmlFor="businessName">Business Name</Label>
                     <Input
