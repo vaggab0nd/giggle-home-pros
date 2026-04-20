@@ -22,7 +22,11 @@ import {
   HardHat,
   MapPin,
   Loader2,
+  ShieldCheck,
+  ShieldAlert,
+  Search,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 const EXPERTISE_OPTIONS = [
   { label: "Plumbing", icon: Droplets, description: "Pipes, fixtures & water systems" },
@@ -54,6 +58,19 @@ const ContractorOnboarding = () => {
   const [zipLocation, setZipLocation] = useState("");
   const [zipLoading, setZipLoading] = useState(false);
   const [phone, setPhone] = useState("");
+
+  // CSLB licence
+  const [licenceNumber, setLicenceNumber] = useState("");
+  const [licenceLoading, setLicenceLoading] = useState(false);
+  const [licenceError, setLicenceError] = useState<string | null>(null);
+  const [licenceData, setLicenceData] = useState<{
+    licence_number: string;
+    business_name: string;
+    primary_status: string;
+    is_active: boolean;
+    expiration_date: string | null;
+    classifications: string | null;
+  } | null>(null);
 
   const [expertise, setExpertise] = useState<string[]>([]);
 
@@ -106,6 +123,48 @@ const ContractorOnboarding = () => {
     setStep(2);
   };
 
+  const verifyLicence = async () => {
+    setLicenceError(null);
+    setLicenceData(null);
+    const trimmed = licenceNumber.trim();
+    if (!trimmed) { setLicenceError("Please enter a licence number"); return; }
+    if (!/^\d+$/.test(trimmed)) { setLicenceError("CSLB licence numbers are numeric (e.g. 1000002)"); return; }
+
+    setLicenceLoading(true);
+    try {
+      const { data, error } = await supabase.rpc("lookup_cslb_licence", { p_licence_number: trimmed });
+      if (error) {
+        setLicenceError(error.message);
+      } else if (!data) {
+        setLicenceError(`No CSLB licence found for ${trimmed}`);
+      } else {
+        const d = data as any;
+        setLicenceData({
+          licence_number: d.licence_number,
+          business_name: d.business_name,
+          primary_status: d.primary_status,
+          is_active: d.is_active,
+          expiration_date: d.expiration_date,
+          classifications: d.classifications,
+        });
+        // Auto-fill business name if empty
+        if (!businessName.trim() && d.business_name) {
+          setBusinessName(d.business_name);
+        }
+        toast({
+          title: d.is_active ? "Licence verified ✓" : "Licence found",
+          description: d.is_active
+            ? `${d.business_name} — ${d.primary_status}`
+            : `Status: ${d.primary_status}. You can still continue.`,
+        });
+      }
+    } catch (e) {
+      setLicenceError(e instanceof Error ? e.message : "Lookup failed");
+    } finally {
+      setLicenceLoading(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!user) {
       toast({ title: "You must be signed in to create a contractor profile.", variant: "destructive" });
@@ -118,21 +177,37 @@ const ContractorOnboarding = () => {
 
     setSaving(true);
 
-    const { error } = await supabase.from("contractors" as any).insert({
-      user_id: user.id,
-      business_name: businessName.trim(),
-      postcode: postcode.trim(),
-      phone: phone.trim(),
-      expertise,
-    } as any);
-
-    setSaving(false);
+    const { data: inserted, error } = await supabase
+      .from("contractors" as any)
+      .insert({
+        user_id: user.id,
+        business_name: businessName.trim(),
+        postcode: postcode.trim(),
+        phone: phone.trim(),
+        expertise,
+        license_number: licenceData?.licence_number || (licenceNumber.trim() || null),
+      } as any)
+      .select("id")
+      .single();
 
     if (error) {
+      setSaving(false);
       toast({ title: "Error", description: error.message, variant: "destructive" });
       return;
     }
 
+    // Save CSLB verification details if we have them
+    if (licenceData && inserted) {
+      const contractorId = (inserted as any).id;
+      await supabase.from("contractor_details" as any).upsert({
+        id: contractorId,
+        cslb_licence_number: licenceData.licence_number,
+        licence_status: licenceData.primary_status,
+        licence_verified_at: new Date().toISOString(),
+      } as any, { onConflict: "id" });
+    }
+
+    setSaving(false);
     toast({ title: "Welcome aboard! 🎉", description: "Your contractor profile has been created." });
     navigate(user ? "/dashboard" : "/");
   };
@@ -174,6 +249,74 @@ const ContractorOnboarding = () => {
                 </div>
 
                 <div className="space-y-4">
+                  {/* CSLB Licence Lookup */}
+                  <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
+                    <div>
+                      <Label htmlFor="licence" className="flex items-center gap-1.5">
+                        <ShieldCheck className="w-4 h-4 text-primary" />
+                        CSLB Licence Number
+                        <span className="text-xs text-muted-foreground font-normal">(optional but recommended)</span>
+                      </Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Verify your California licence to auto-fill your business name and earn a verified badge.
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        id="licence"
+                        value={licenceNumber}
+                        onChange={(e) => {
+                          setLicenceNumber(e.target.value);
+                          setLicenceError(null);
+                          setLicenceData(null);
+                        }}
+                        placeholder="e.g. 1000002"
+                        inputMode="numeric"
+                        disabled={licenceLoading}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={verifyLicence}
+                        disabled={licenceLoading || !licenceNumber.trim()}
+                        className="shrink-0"
+                      >
+                        {licenceLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                        Verify
+                      </Button>
+                    </div>
+                    {licenceError && (
+                      <div className="flex items-start gap-2 text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-md p-2">
+                        <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
+                        <span>{licenceError}</span>
+                      </div>
+                    )}
+                    {licenceData && (
+                      <div className="rounded-md border bg-card p-3 space-y-1.5">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <span className="font-semibold text-sm">{licenceData.business_name}</span>
+                          <Badge
+                            className={
+                              licenceData.is_active
+                                ? "bg-green-100 text-green-800 border-green-300 hover:bg-green-100"
+                                : "bg-red-100 text-red-800 border-red-300 hover:bg-red-100"
+                            }
+                          >
+                            {licenceData.is_active ? <ShieldCheck className="w-3 h-3 mr-1" /> : <ShieldAlert className="w-3 h-3 mr-1" />}
+                            {licenceData.primary_status}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Licence #{licenceData.licence_number}
+                          {licenceData.expiration_date && <> · Expires {new Date(licenceData.expiration_date).toLocaleDateString()}</>}
+                        </p>
+                        {licenceData.classifications && (
+                          <p className="text-xs text-muted-foreground">Classes: {licenceData.classifications}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
                   <div>
                     <Label htmlFor="businessName">Business Name</Label>
                     <Input
